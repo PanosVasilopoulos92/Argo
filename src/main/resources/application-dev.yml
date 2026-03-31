@@ -1,0 +1,43 @@
+# =============================================================================
+# DEV PROFILE
+# =============================================================================
+# Activated by: SPRING_PROFILES_ACTIVE=dev (set in docker-compose.dev.yml)
+#
+# This file supports TWO workflows:
+#
+#   1. FROM YOUR IDE (IntelliJ) — the default.
+#      The datasource URL below points to localhost:5432, which reaches
+#      Postgres via the port published in docker-compose.dev.yml.
+#      Devtools hot-restart works normally.
+#
+#   2. FROM DOCKER — docker-compose.dev.yml sets SPRING_DATASOURCE_URL
+#      as an environment variable, which overrides the URL below.
+#      The env var uses "postgres_db" (Docker DNS) instead of "localhost".
+
+# Philosophy: maximize developer feedback.
+#   - ddl-auto: update  → Hibernate auto-applies schema changes (fast iteration)
+#   - show-sql: true     → see what Hibernate generates
+#   - DEBUG logging       → full visibility into app behavior
+# =============================================================================
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/argo-dev
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+  devtools:
+    livereload:
+      port: 35729
+
+logging:
+  level:
+    com.viators.argo: DEBUG
+    org.hibernate.sql: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
+  file:
+    name: logs/Argo-logs.txt
+server:
+  port: 8888

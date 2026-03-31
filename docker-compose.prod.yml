@@ -1,0 +1,19 @@
+# =============================================================================
+# PROD OVERRIDE
+# =============================================================================
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up
+#
+# What this adds to the base:
+#   - Postgres ports remain UNPUBLISHED (only accessible within Docker network)
+#   - Sets Spring profile to "prod"
+#   - Points the backend to the argo-prod database
+# =============================================================================
+
+services:
+
+  backend:
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres_db:5432/argo-prod
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/argo-realm
+      KEYCLOAK_ADMIN_SERVER_URL: http://keycloak:8080

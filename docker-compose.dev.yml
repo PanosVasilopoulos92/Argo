@@ -1,0 +1,21 @@
+# =============================================================================
+# DEV OVERRIDE
+# =============================================================================
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# What this adds to the base:
+#   - Publishes Postgres port 5432 to host (for PgAdmin / IDE access)
+#   - Sets Spring profile to "dev"
+#   - Points the backend to the argo-dev database
+# =============================================================================
+services:
+  postgres_db:
+    ports:
+      - "5432:5432"
+
+  backend:
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres_db:5432/argo-dev
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/argo-realm
+      KEYCLOAK_ADMIN_SERVER_URL: http://keycloak:8080

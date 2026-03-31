@@ -1,0 +1,64 @@
+# =============================================================================
+# SHARED CONFIG — applies to all profiles
+# =============================================================================
+# Profile-specific settings go in application-dev.yml / application-prod.yml.
+# Datasource URL, username, and password are injected via environment variables
+# in docker-compose, so they are NOT defined here.
+# =============================================================================
+spring:
+  application:
+    name: argo
+
+  # == OAuth2 Resource Server ==========================================
+  #
+  # This single property does a lot of work:
+  #
+  # 1. At startup, Spring fetches the OIDC discovery document:
+  #    GET {issuer-uri}/.well-known/openid-configuration
+  #    From that document, Spring discovers:
+  #      - The JWKS URI (where to get Keycloak's public keys)
+  #      - Supported signing algorithms
+  #      - Token endpoint, userinfo endpoint, etc.
+  #
+  # 2. Spring fetches the public key from the JWKS URI and caches it.
+  #    No secret key in your config. No key management in your code.
+  #
+  # 3. On every request, the issuer (iss claim) in the token is
+  #    validated against this URI. If it doesn't match, 401.
+  #
+  # Default uses localhost:8181 — works when running from IntelliJ
+  # while Keycloak runs in Docker (port 8181 is published to the host).
+  # When running inside Docker, the compose override sets the env var
+  # SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI to use the
+  # Docker service name instead.
+  #
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8181/realms/argo-realm
+  jpa:
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+# == Keycloak Admin Configuration ======================================
+#
+# Used by KeycloakAdminService to create users during registration.
+# Your app needs admin rights to create users in Keycloak.
+# The client_credentials grant type lets argo-api act as an admin
+# without a human user logging in.
+#
+# IMPORTANT: client-secret must ALWAYS come from an env variable.
+# Never commit secrets to version control.
+#
+# server-url defaults to localhost:8181 for IntelliJ development.
+# Docker compose overrides this via the KEYCLOAK_ADMIN_SERVER_URL env var.
+#
+keycloak:
+  admin:
+    server-url: http://localhost:8181
+    realm: argo-realm
+    client-id: argo-api
+    client-secret: ${KEYCLOAK_CLIENT_SECRET}
