@@ -6,8 +6,17 @@
 # in docker-compose, so they are NOT defined here.
 # =============================================================================
 spring:
+  profiles:
+    active: dev
   application:
     name: argo
+
+  mvc:
+#    Spring MVC's built-in exceptions (like MethodArgumentNotValidException, HttpRequestMethodNotSupportedException,
+#    NoHandlerFoundException, etc.) will now automatically return ProblemDetail responses with application/problem+json
+#    content type — without us writing any handler code for them.
+    problemdetails:
+      enabled: true
 
   # == OAuth2 Resource Server ==========================================
   #

@@ -32,6 +32,7 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     private final JwtConverterConfig jwtConverterConfig;
+    private final SecurityProblemDetailHandler securityProblemDetailHandler;
 
     public SecurityFilterChain securityFilterChain(HttpSecurity http) {
         http
@@ -50,6 +51,10 @@ public class SecurityConfig {
                         jwtConverterConfig.jwtAuthenticationConverter()
                     )
                 )
+            )
+            .exceptionHandling(exceptions -> exceptions
+                .authenticationEntryPoint(securityProblemDetailHandler.authenticationEntryPoint())
+                .accessDeniedHandler(securityProblemDetailHandler.accessDeniedHandler())
             );
 
         return http.build();
