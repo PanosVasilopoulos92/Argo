@@ -1,6 +1,7 @@
 package org.viators.argo.config;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -32,7 +33,9 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     private final JwtConverterConfig jwtConverterConfig;
+    private final SecurityProblemDetailHandler securityProblemDetailHandler;
 
+    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) {
         http
             .csrf(AbstractHttpConfigurer::disable)
@@ -50,6 +53,10 @@ public class SecurityConfig {
                         jwtConverterConfig.jwtAuthenticationConverter()
                     )
                 )
+            )
+            .exceptionHandling(exceptions -> exceptions
+                .authenticationEntryPoint(securityProblemDetailHandler.authenticationEntryPoint())
+                .accessDeniedHandler(securityProblemDetailHandler.accessDeniedHandler())
             );
 
         return http.build();
