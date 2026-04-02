@@ -1,0 +1,15 @@
+Business Rules:
+
+BR-001: IMO number is mandatory and globally unique. Format: 7 digits. This is the primary business identifier for a vessel.
+Rationale: IMO numbers are assigned by the International Maritime Organization and never change for the life of a vessel.
+
+BR-002: Vessel name is mandatory. While vessels can be renamed, they must always have a name on record.
+
+BR-003: MMSI number, if provided, must be exactly 9 digits and unique. Rationale: Maritime Mobile Service Identity is used for
+radio communications and vessel tracking.
+
+BR-004: Flag state is mandatory. Recorded as ISO 3166-1 alpha-3 country code. Rationale: Determines which country's maritime
+regulations apply.
+
+BR-005: Gross tonnage must be a positive number if provided. Rationale: Used for port fees, safety regulations, and manning
+requirements.
