@@ -1,24 +1,23 @@
-package org.viators.argo.common.entity;
+package org.viators.argo.person;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.viators.argo.common.BaseEntity;
+import org.viators.argo.common.entity.BaseEntity;
 import org.viators.argo.common.enums.GenderEnum;
 
 import java.time.LocalDate;
 
 @Entity
 @Table(name = "persons")
+@Inheritance(strategy = InheritanceType.JOINED)
 @Getter
 @Setter
 @ToString(callSuper = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
-public class PersonT extends BaseEntity {
+public abstract class PersonT extends BaseEntity {
 
     @Column(name = "first_name", nullable = false, length = 30)
     private String firstName;
@@ -32,7 +31,7 @@ public class PersonT extends BaseEntity {
     @Column(name = "mother_name", length = 30)
     private String motherName;
 
-    @Column(name = "nationality")
+    @Column(name = "nationality", nullable = false, length = 3)
     private String nationality;
 
     @Column(name = "birth_date")
@@ -44,23 +43,17 @@ public class PersonT extends BaseEntity {
     @Column(name = "gender")
     private GenderEnum gender;
 
-    @Column(name = "passport_number")
+    @Column(name = "passport_number", unique = true)
     private String passportNumber;
 
     @Column(name = "passport_expiry_date")
     private LocalDate passportExpiryDate;
 
-    @Column(name = "remarks")
-    private String remarks;
-
     @Column(name = "passport_issued")
     private LocalDate passportIssued;
 
-    @Column(name = "sb_issued")
-    private LocalDate sbIssued;
-
-    @Column(name = "sb_expiry")
-    private LocalDate sbExpiry;
+    @Column(name = "remarks")
+    private String remarks;
 
     @Column(name = "bank_name", length = 60)
     private String bankName;

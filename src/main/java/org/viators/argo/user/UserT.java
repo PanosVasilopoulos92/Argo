@@ -3,7 +3,7 @@ package org.viators.argo.user;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.viators.argo.common.BaseEntity;
+import org.viators.argo.common.entity.BaseEntity;
 
 import java.time.LocalDate;
 
