@@ -1,0 +1,17 @@
+Business Rules:
+
+BR-014: First name and last name are mandatory. Rationale: Legal identification requirement for maritime documentation.
+
+BR-015: Passport number is mandatory and unique. Rationale: Primary identification document for international seafarers. Required for port state control and immigration.
+
+BR-016: Passport expiry date must be in the future at the time of registration. Rationale: Seafarers cannot be deployed with expired travel documents.
+
+BR-017: Nationality is mandatory, recorded as ISO 3166-1 alpha-3. Rationale: Determines applicable labor conventions and visa requirements.
+
+BR-018: Seaman book number, if provided, must be unique. Rationale: The seaman book is an official maritime document that is individually assigned.
+
+BR-019: Seaman book expiry date, if provided, must be in the future. Rationale: Same logic as passport — expired documents prevent deployment.
+
+BR-020: Rank is mandatory. Rationale: Determines what positions the seafarer can fill on a vessel. Critical for manning compliance.
+
+BR-021: Date of birth, if provided, must be in the past. Rationale: Basic data integrity.
