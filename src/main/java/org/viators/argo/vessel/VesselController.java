@@ -41,9 +41,15 @@ public class VesselController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{imoNumber}")
+    @GetMapping("/imo/{imoNumber}")
     public ResponseEntity<VesselDetailsResponse> getVesselByImoNumber(@PathVariable String imoNumber) {
         VesselDetailsResponse response = vesselService.getVesselByImoNumber(imoNumber);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/pid/{publicId}")
+    public ResponseEntity<VesselDetailsResponse> getVesselByPublicId(@PathVariable String publicId) {
+        VesselDetailsResponse response = vesselService.getVesselByPublicId(publicId);
         return ResponseEntity.ok(response);
     }
 
