@@ -13,3 +13,13 @@ regulations apply.
 
 BR-005: Gross tonnage must be a positive number if provided. Rationale: Used for port fees, safety regulations, and manning
 requirements.
+
+BR-006: Default page size is 20, maximum 100. Rationale: Balances usability with performance for fleets that may have hundreds of vessels.
+
+BR-007: Search by IMO is always exact match. Rationale: IMO numbers are precise identifiers — partial matching creates confusion.
+
+BR-008: IMO number is immutable after vessel creation. Rationale: IMO numbers are permanent identifiers assigned for the life of a vessel.
+Changing them would break data integrity across the system.
+
+BR-009: Optimistic locking must be enforced. If the vessel was modified since the user loaded it, the update must fail with a clear conflict
+error. Rationale: In a multi-user environment, silent overwrites cause data loss.
