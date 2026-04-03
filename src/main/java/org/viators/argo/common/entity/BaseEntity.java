@@ -1,6 +1,5 @@
-package org.viators.argo.common;
+package org.viators.argo.common.entity;
 
-import jakarta.annotation.PostConstruct;
 import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
@@ -24,7 +23,7 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @SuperBuilder
-public class BaseEntity {
+public abstract class BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -58,7 +57,7 @@ public class BaseEntity {
     @Builder.Default
     private ResourceStatusEnum status = ResourceStatusEnum.ACTIVE;
 
-    @PostConstruct
+    @PrePersist
     private void onCreate() {
         if (publicId == null) {
             publicId = UUID.randomUUID().toString();
