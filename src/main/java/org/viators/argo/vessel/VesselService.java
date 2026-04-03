@@ -35,7 +35,6 @@ public class VesselService {
         return vessel.getPublicId();
     }
 
-    @Transactional
     public VesselDetailsResponse updateVesselInfo(String publicId, UpdateVesselInfoRequest request) {
 
         VesselT vessel = vesselRepository.findByPublicId(publicId)
@@ -45,6 +44,28 @@ public class VesselService {
 
         request.update(vessel); // Dirty checking update
         return VesselDetailsResponse.from(vessel);
+    }
+
+    public void deactivateVessel(String publicId) {
+        VesselT vessel = vesselRepository.findByPublicId(publicId)
+            .orElseThrow(() -> new ResourceNotFoundException("Vessel", "publicId", publicId));
+
+        if (!ResourceStatusEnum.ACTIVE.equals(vessel.getStatus())) {
+            throw new IllegalStateException("Vessel with publicId: %s is already deactivated".formatted(publicId));
+        }
+
+        vessel.setStatus(ResourceStatusEnum.INACTIVE);
+    }
+
+    public void reactivateVessel(String publicId) {
+        VesselT vessel = vesselRepository.findByPublicId(publicId)
+            .orElseThrow(() -> new ResourceNotFoundException("Vessel", "publicId", publicId));
+
+        if (ResourceStatusEnum.ACTIVE.equals(vessel.getStatus())) {
+            throw new IllegalStateException("Vessel with publicId: %s is already active".formatted(publicId));
+        }
+
+        vessel.setStatus(ResourceStatusEnum.ACTIVE);
     }
 
     @Transactional(readOnly = true)
@@ -81,7 +102,6 @@ public class VesselService {
             .map(VesselSummaryResponse::from);
     }
 
-
     // Helper private methods
     private void operationIsValid(String vesselName, String mmsiNumber, String callSign, String imoNumber) {
 
@@ -101,4 +121,5 @@ public class VesselService {
             throw new DuplicateResourceException("Vessel", "imoNumber", imoNumber);
         }
     }
+
 }

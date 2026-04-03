@@ -37,7 +37,6 @@ public class VesselController {
     @PutMapping("/{publicId}")
     public ResponseEntity<VesselDetailsResponse> updateVesselInfo(@PathVariable String publicId,
                                                                   @Valid @RequestBody UpdateVesselInfoRequest request) {
-
         VesselDetailsResponse response = vesselService.updateVesselInfo(publicId, request);
         return ResponseEntity.ok(response);
     }
@@ -52,9 +51,22 @@ public class VesselController {
     public ResponseEntity<Page<VesselSummaryResponse>> getVesselsFiltered(@ModelAttribute VesselFilterRequest filter,
                                                                           @PageableDefault(sort = "vesselName", direction = Sort.Direction.ASC)
                                                                           Pageable pageable) {
-
         Page<VesselSummaryResponse> response = vesselService.getVesselsFiltered(filter, pageable);
         return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("hasRole('FOM')")
+    @PatchMapping("/{publicId}/deactivate")
+    public ResponseEntity<Void> deactivateVessel(@PathVariable String publicId) {
+        vesselService.deactivateVessel(publicId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize("hasRole('FOM')")
+    @PatchMapping("/{publicId}/reactivate")
+    public ResponseEntity<Void> reactivateVessel(@PathVariable String publicId) {
+        vesselService.reactivateVessel(publicId);
+        return ResponseEntity.noContent().build();
     }
 
 }
