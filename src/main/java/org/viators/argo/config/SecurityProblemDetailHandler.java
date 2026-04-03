@@ -35,7 +35,6 @@ public class SecurityProblemDetailHandler {
 
     private final ObjectMapper objectMapper;
 
-
     public AuthenticationEntryPoint authenticationEntryPoint() {
         return (HttpServletRequest request,
                 HttpServletResponse response,
@@ -45,7 +44,7 @@ public class SecurityProblemDetailHandler {
                 "Authentication is required to access this resource"
             );
             problem.setTitle("Unauthorized");
-            problem.setType(URI.create("https://api.ops.com/errors/unauthorized"));
+            problem.setType(URI.create("https://api.argo.com/errors/unauthorized"));
             problem.setInstance(URI.create(request.getRequestURI()));
             problem.setProperty("errorCode", "UNAUTHORIZED");
             problem.setProperty("timestamp", Instant.now());
@@ -67,7 +66,7 @@ public class SecurityProblemDetailHandler {
                 "You do not have permission to access this resource"
             );
             problem.setTitle("Forbidden");
-            problem.setType(URI.create("https://api.ops.com/errors/forbidden"));
+            problem.setType(URI.create("https://api.argo.com/errors/forbidden"));
             problem.setInstance(URI.create(request.getRequestURI()));
             problem.setProperty("errorCode", "FORBIDDEN");
             problem.setProperty("timestamp", Instant.now());

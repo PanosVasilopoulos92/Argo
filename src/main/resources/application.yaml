@@ -51,6 +51,11 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+  data:
+    web:
+      pageable:
+        max-page-size: 100
+        default-page-size: 20
 
 # == Keycloak Admin Configuration ======================================
 #

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.viators.argo.auth.dto.CreateUserRequest;
 import org.viators.argo.common.enums.ResourceStatusEnum;
+import org.viators.argo.common.exceptions.DuplicateResourceException;
 import org.viators.argo.config.KeycloakAdminProperties;
 import org.viators.argo.user.UserRepository;
 import org.viators.argo.user.UserRoleEnum;
@@ -45,10 +46,10 @@ public class KeycloakAdminService {
 
         // Todo: replace with custom exceptions
         if (userRepository.existsByUsername(request.username())) {
-            throw new IllegalArgumentException("Username already taken: " + request.username());
+            throw new DuplicateResourceException("Username already taken: " + request.username());
         }
         if (userRepository.existsByEmail(request.email())) {
-            throw new IllegalArgumentException("Email already registered: " + request.email());
+            throw new DuplicateResourceException("Email already registered: " + request.email());
         }
 
         // Keycloak Admin API interaction.
@@ -81,6 +82,7 @@ public class KeycloakAdminService {
                 .roles()
                 .get("USER")
                 .toRepresentation();
+
             userResource.roles().realmLevel().add(List.of(userRole));
 
             // Save local application data.
