@@ -16,4 +16,8 @@ public interface VesselRepository extends JpaRepository<VesselT, Long>, JpaSpeci
     boolean existsByImoNumber(String imoNumber);
 
     boolean existsByMmsiNumber(String mmsiNumber);
+
+    boolean existsByVesselName(String vesselName);
+
+    boolean existsByCallSign(String callSign);
 }
