@@ -3,7 +3,7 @@ package org.viators.argo.vessel;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.viators.argo.common.BaseEntity;
+import org.viators.argo.common.entity.BaseEntity;
 import org.viators.argo.vessel.enums.ClassificationSocietyEnum;
 import org.viators.argo.vessel.enums.VesselTypeEnum;
 
