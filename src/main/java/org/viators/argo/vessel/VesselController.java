@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.viators.argo.vessel.dto.request.CreateVesselRequest;
+import org.viators.argo.vessel.dto.request.UpdateVesselInfoRequest;
 import org.viators.argo.vessel.dto.request.VesselFilterRequest;
 import org.viators.argo.vessel.dto.response.VesselDetailsResponse;
 import org.viators.argo.vessel.dto.response.VesselSummaryResponse;
@@ -26,12 +27,19 @@ public class VesselController {
     @PreAuthorize("hasRole('FOM')")
     @PostMapping
     public ResponseEntity<String> create(@Valid @RequestBody CreateVesselRequest request) {
-
         String publicId = vesselService.create(request);
-
         return ResponseEntity
             .created(URI.create("/api/v1/vessels/".concat(publicId)))
             .body(publicId);
+    }
+
+    @PreAuthorize("hasRole('FOM')")
+    @PutMapping("/{publicId}")
+    public ResponseEntity<VesselDetailsResponse> updateVesselInfo(@PathVariable String publicId,
+                                                                  @Valid @RequestBody UpdateVesselInfoRequest request) {
+
+        VesselDetailsResponse response = vesselService.updateVesselInfo(publicId, request);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{imoNumber}")
@@ -41,10 +49,10 @@ public class VesselController {
     }
 
     @GetMapping("/filter")
-    public ResponseEntity<Page<VesselSummaryResponse>> getVesselsFiltered(
-        @ModelAttribute VesselFilterRequest filter,
-        @PageableDefault(sort = "vesselName", direction = Sort.Direction.ASC) Pageable pageable
-        ) {
+    public ResponseEntity<Page<VesselSummaryResponse>> getVesselsFiltered(@ModelAttribute VesselFilterRequest filter,
+                                                                          @PageableDefault(sort = "vesselName", direction = Sort.Direction.ASC)
+                                                                          Pageable pageable) {
+
         Page<VesselSummaryResponse> response = vesselService.getVesselsFiltered(filter, pageable);
         return ResponseEntity.ok(response);
     }

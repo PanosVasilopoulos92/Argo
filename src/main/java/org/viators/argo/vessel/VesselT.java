@@ -20,13 +20,13 @@ public class VesselT extends BaseEntity {
     @Column(name = "name", nullable = false, length = 100)
     private String vesselName;
 
-    @Column(name = "imo_number", nullable = false, unique = true)
+    @Column(name = "imo_number", nullable = false, unique = true, updatable = false)
     private String imoNumber; // International Maritime Organization ID
 
     @Column(name = "mmsi_number", unique = true)
     private String mmsiNumber; // Maritime Mobile Service Identity
 
-    @Column(name = "call_sign", length = 10)
+    @Column(name = "call_sign", unique = true, length = 10)
     private String callSign;
 
     @Column(name = "flag_state", nullable = false, length = 3)
