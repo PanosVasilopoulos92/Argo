@@ -24,7 +24,8 @@ public record VesselDetailsResponse(
     String portOfRegistry,
     ResourceStatusEnum status,
     LocalDateTime createdAt,
-    LocalDateTime updatedAt
+    LocalDateTime updatedAt,
+    Long version
 ) {
 
     public static VesselDetailsResponse from(VesselT entity) {
@@ -45,7 +46,8 @@ public record VesselDetailsResponse(
             entity.getPortOfRegistry(),
             entity.getStatus(),
             entity.getCreatedAt(),
-            entity.getUpdatedAt()
+            entity.getUpdatedAt(),
+            entity.getVersion()
         );
     }
 }

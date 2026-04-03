@@ -23,3 +23,10 @@ Changing them would break data integrity across the system.
 
 BR-009: Optimistic locking must be enforced. If the vessel was modified since the user loaded it, the update must fail with a clear conflict
 error. Rationale: In a multi-user environment, silent overwrites cause data loss.
+
+BR-010: Vessels are never hard-deleted. Rationale: Vessels have regulatory and financial history that must be preserved for compliance and auditing.
+
+BR-011: Deactivating a vessel does not affect related historical records (once voyage/crew assignment tracking exists). Rationale: Past data remains
+valid regardless of current vessel status.
+
+BR-012: Only INACTIVE vessels can be reactivated. Rationale: Prevents accidental state changes and keeps the status lifecycle clean.
