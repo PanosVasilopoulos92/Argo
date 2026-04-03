@@ -38,8 +38,8 @@ public class PersonT extends BaseEntity {
     @Column(name = "birth_date")
     private LocalDate birthDate;
 
-    @Column(name = "born_place", length = 20)
-    private String bornPlace;
+    @Column(name = "birth_place", length = 20)
+    private String birthPlace;
 
     @Column(name = "gender")
     private GenderEnum gender;
@@ -61,12 +61,6 @@ public class PersonT extends BaseEntity {
 
     @Column(name = "sb_expiry")
     private LocalDate sbExpiry;
-
-    @Column(name = "pension_flag", length = 1)
-    private String pensionFlag;
-
-    @Column(name = "ssn", length = 15)
-    private String ssn;
 
     @Column(name = "bank_name", length = 60)
     private String bankName;

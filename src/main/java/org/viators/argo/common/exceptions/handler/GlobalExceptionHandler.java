@@ -1,9 +1,11 @@
 package org.viators.argo.common.exceptions.handler;
 
+import jakarta.persistence.OptimisticLockException;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.http.*;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -20,7 +22,7 @@ import java.util.List;
 @Slf4j
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
-    private static final String ERROR_TYPE_BASE = "http://api.argo.com/errors";
+    private static final String ERROR_TYPE_BASE = "https://api.argo.com/errors";
 
     // ═══════════════════════════════════════════════════════════════
     //  Custom Application Exceptions
@@ -86,9 +88,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @Override
     protected @Nullable ResponseEntity<Object> handleMethodArgumentNotValid(
         MethodArgumentNotValidException ex,
-        HttpHeaders headers,
-        HttpStatusCode status,
-        WebRequest request) {
+        @NonNull HttpHeaders headers,
+        @NonNull HttpStatusCode status,
+        @NonNull WebRequest request) {
 
         log.debug("Validation failed with {} errors", ex.getErrorCount());
 
@@ -96,6 +98,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             HttpStatus.BAD_REQUEST,
             "One or more fields failed validation"
         );
+
         problemDetail.setTitle("Validation failed");
         problemDetail.setType(URI.create(ERROR_TYPE_BASE.concat("validation-failed")));
         problemDetail.setProperty("errorCode", ErrorCodeEnum.VALIDATION_FAILED);
@@ -151,6 +154,25 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     // ═══════════════════════════════════════════════════════════════
     //  Data Access Exceptions
     // ═══════════════════════════════════════════════════════════════
+
+    /*
+     The handler catches both OptimisticLockException (JPA / manually thrown) and
+     ObjectOptimisticLockingFailureException (Spring's wrapper when JPA auto-detects a version mismatch).
+     */
+    @ExceptionHandler({OptimisticLockException.class, ObjectOptimisticLockingFailureException.class})
+    public ProblemDetail handleOptimisticLockException(Exception ex) {
+        log.warn("Optimistic lock conflict: {}", ex.getMessage());
+
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+            HttpStatus.CONFLICT,
+            ex.getMessage()
+        );
+        problem.setTitle("Conflict");
+        problem.setType(URI.create(ERROR_TYPE_BASE + "conflict"));
+        problem.setProperty("errorCode", ErrorCodeEnum.CONFLICT);
+
+        return problem;
+    }
 
     /**
      * Handles database constraint violations that slip past service-layer validation.
@@ -220,6 +242,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
      * Both inherited handlers (Spring MVC exceptions) and our custom
      * handlers route through this method.
      */
+    @Override
     protected ResponseEntity<Object> handleExceptionInternal(
         @NonNull Exception ex,
         Object body,
