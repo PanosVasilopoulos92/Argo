@@ -12,6 +12,7 @@ import org.viators.argo.common.enums.ResourceStatusEnum;
 import org.viators.argo.common.exceptions.DuplicateResourceException;
 import org.viators.argo.common.exceptions.ResourceNotFoundException;
 import org.viators.argo.vessel.dto.request.CreateVesselRequest;
+import org.viators.argo.vessel.dto.request.UpdateVesselInfoRequest;
 import org.viators.argo.vessel.dto.request.VesselFilterRequest;
 import org.viators.argo.vessel.dto.response.VesselDetailsResponse;
 import org.viators.argo.vessel.dto.response.VesselSummaryResponse;
@@ -26,13 +27,7 @@ public class VesselService {
 
     public String create(CreateVesselRequest request) {
 
-        if (vesselRepository.existsByImoNumber(request.imoNumber())) {
-            throw new DuplicateResourceException("Vessel", "imoNumber", request.imoNumber());
-        }
-
-        if (request.mmsiNumber() != null && vesselRepository.existsByMmsiNumber(request.mmsiNumber())) {
-            throw new DuplicateResourceException("Vessel", "mmsiNumber", request.imoNumber());
-        }
+        operationIsValid(request.vesselName(), request.mmsiNumber(), request.callSign(), request.imoNumber());
 
         VesselT vessel = request.toEntity();
         vessel = vesselRepository.save(vessel);
@@ -40,6 +35,19 @@ public class VesselService {
         return vessel.getPublicId();
     }
 
+    @Transactional
+    public VesselDetailsResponse updateVesselInfo(String publicId, UpdateVesselInfoRequest request) {
+
+        VesselT vessel = vesselRepository.findByPublicId(publicId)
+            .orElseThrow(() -> new ResourceNotFoundException("Vessel", "publicId", publicId));
+
+        operationIsValid(request.vesselName(), request.mmsiNumber(), request.callSign(), null);
+
+        request.update(vessel); // Dirty checking update
+        return VesselDetailsResponse.from(vessel);
+    }
+
+    @Transactional(readOnly = true)
     public VesselDetailsResponse getVesselByImoNumber(String imoNumber) {
 
         VesselT vessel = vesselRepository.findByImoNumber(imoNumber)
@@ -48,6 +56,7 @@ public class VesselService {
         return VesselDetailsResponse.from(vessel);
     }
 
+    @Transactional(readOnly = true)
     public Page<VesselSummaryResponse> getVesselsFiltered(VesselFilterRequest filter, Pageable pageable) {
         // Produces a predicate that's always true in order to initialize specs
         Specification<VesselT> specs = (root, query, cb) -> cb.conjunction();
@@ -70,6 +79,26 @@ public class VesselService {
 
         return vesselRepository.findAll(specs, pageable)
             .map(VesselSummaryResponse::from);
+    }
 
+
+    // Helper private methods
+    private void operationIsValid(String vesselName, String mmsiNumber, String callSign, String imoNumber) {
+
+        if (StringUtils.hasText(vesselName) && vesselRepository.existsByVesselName(vesselName)) {
+            throw new DuplicateResourceException("Vessel", "vesselName", vesselName);
+        }
+
+        if (StringUtils.hasText(mmsiNumber) && vesselRepository.existsByMmsiNumber(mmsiNumber)) {
+            throw new DuplicateResourceException("Vessel", "mmsiNumber", mmsiNumber);
+        }
+
+        if (StringUtils.hasText(callSign) && vesselRepository.existsByCallSign(callSign)) {
+            throw new DuplicateResourceException("Vessel", "callSign", callSign);
+        }
+
+        if (StringUtils.hasText(imoNumber) && vesselRepository.existsByImoNumber(imoNumber)) {
+            throw new DuplicateResourceException("Vessel", "imoNumber", imoNumber);
+        }
     }
 }
