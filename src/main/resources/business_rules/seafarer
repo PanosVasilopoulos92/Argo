@@ -15,3 +15,5 @@ BR-019: Seaman book expiry date, if provided, must be in the future. Rationale: 
 BR-020: Rank is mandatory. Rationale: Determines what positions the seafarer can fill on a vessel. Critical for manning compliance.
 
 BR-021: Date of birth, if provided, must be in the past. Rationale: Basic data integrity.
+
+BR-022: Search by passport number is always exact match. Rationale: Passport numbers are precise identifiers — same reasoning as IMO number search.
