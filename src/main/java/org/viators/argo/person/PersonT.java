@@ -11,11 +11,11 @@ import java.time.LocalDate;
 @Entity
 @Table(name = "persons")
 @Inheritance(strategy = InheritanceType.JOINED)
+@DiscriminatorColumn(name = "person_type")
 @Getter
 @Setter
 @ToString(callSuper = true)
 @NoArgsConstructor
-@AllArgsConstructor
 @SuperBuilder
 public abstract class PersonT extends BaseEntity {
 

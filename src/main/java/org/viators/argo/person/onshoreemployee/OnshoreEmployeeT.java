@@ -18,5 +18,6 @@ import org.viators.argo.person.PersonT;
 @SuperBuilder
 public class OnshoreEmployeeT extends PersonT {
 
+    private String testField;
 
 }
