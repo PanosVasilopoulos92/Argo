@@ -23,12 +23,12 @@ public class SeafarerT extends PersonT {
     @Column(name = "rank", nullable = false)
     private SeafarerRankEnum rank;
 
-    @Column(name = "sb_number", unique = true)
+    @Column(name = "sb_number", nullable = false, unique = true)
     private String seamanBookNumber;
 
-    @Column(name = "sb_issued")
-    private LocalDate sbIssued;
+    @Column(name = "sb_issued", nullable = false)
+    private LocalDate sbIssuedAt;
 
-    @Column(name = "sb_expiry")
-    private LocalDate sbExpiry;
+    @Column(name = "sb_expiry", nullable = false)
+    private LocalDate sbExpiryDate;
 }

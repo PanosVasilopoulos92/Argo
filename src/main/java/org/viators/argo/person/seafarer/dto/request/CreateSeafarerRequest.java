@@ -1,0 +1,71 @@
+package org.viators.argo.person.seafarer.dto.request;
+
+import jakarta.validation.constraints.*;
+import org.viators.argo.common.enums.GenderEnum;
+import org.viators.argo.person.seafarer.SeafarerT;
+import org.viators.argo.person.seafarer.enums.SeafarerRankEnum;
+
+import java.time.LocalDate;
+
+public record CreateSeafarerRequest(
+    @NotBlank(message = "Firstname is required")
+    @Size(min = 3, max = 30, message = "Firstname must be between 3-30 characters long")
+    String firstname,
+
+    @NotBlank(message = "Lastname is required")
+    @Size(min = 3, max = 30, message = "Lastname must be between 3-30 characters long")
+    String lastname,
+
+    @NotBlank(message = "Father's name is required")
+    @Size(min = 3, max = 30, message = "Father's name must be between 3-30 characters long")
+    String fatherName,
+
+    @NotNull(message = "Birth date is required")
+    @Past(message = "Birth date must be in the past")
+    LocalDate birtDate,
+
+    @NotBlank(message = "Passport number is required")
+    String passportNumber,
+
+    @NotNull(message = "Passport expiry date is required")
+    @Future(message = "Passport expiry date must be in future date")
+    LocalDate passportExpiryDate,
+
+    @NotBlank(message = "Nationality is required")
+    @Pattern(regexp = "^[A-Z]{3}$", message = "Nationality must be in form of ISO 3166-1 alpha-3")
+    String nationality,
+
+    @NotBlank(message = "Seaman book number is required")
+    String seamanBookNumber,
+
+    @NotNull(message = "Seaman book issued date is required")
+    @Past(message = "Seaman book issued date must be in the past")
+    LocalDate sbIssuedAt,
+
+    @NotNull(message = "Seaman book expiry date is required")
+    @Future(message = "Seaman book expiry date must be a future one")
+    LocalDate sbExpiryDate,
+
+    @NotNull(message = "Seafarer rank is required")
+    SeafarerRankEnum seafarerRank,
+
+    @NotNull(message = "Gender is required")
+    GenderEnum gender
+) {
+
+    public SeafarerT toEntity() {
+        return SeafarerT.builder()
+            .firstName(firstname)
+            .lastName(lastname)
+            .fatherName(fatherName)
+            .birthDate(birtDate)
+            .passportNumber(passportNumber)
+            .passportExpiryDate(passportExpiryDate)
+            .nationality(nationality)
+            .seamanBookNumber(seamanBookNumber)
+            .sbExpiryDate(sbExpiryDate)
+            .rank(seafarerRank)
+            .gender(gender)
+            .build();
+    }
+}
