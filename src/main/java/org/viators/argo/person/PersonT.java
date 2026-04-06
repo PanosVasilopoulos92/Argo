@@ -25,7 +25,7 @@ public abstract class PersonT extends BaseEntity {
     @Column(name = "last_name", nullable = false, length = 30)
     private String lastName;
 
-    @Column(name = "father_name", length = 30)
+    @Column(name = "father_name", nullable = false, length = 30)
     private String fatherName;
 
     @Column(name = "mother_name", length = 30)
@@ -34,13 +34,13 @@ public abstract class PersonT extends BaseEntity {
     @Column(name = "nationality", nullable = false, length = 3)
     private String nationality;
 
-    @Column(name = "birth_date")
+    @Column(name = "birth_date", nullable = false)
     private LocalDate birthDate;
 
     @Column(name = "birth_place", length = 20)
     private String birthPlace;
 
-    @Column(name = "gender")
+    @Column(name = "gender", nullable = false)
     private GenderEnum gender;
 
     @Column(name = "passport_number", unique = true)

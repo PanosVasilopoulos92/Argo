@@ -44,17 +44,16 @@ public class KeycloakAdminService {
     @Transactional
     public void registerUser(CreateUserRequest request) {
 
-        // Todo: replace with custom exceptions
         if (userRepository.existsByUsername(request.username())) {
             throw new DuplicateResourceException("Username already taken: " + request.username());
         }
+
         if (userRepository.existsByEmail(request.email())) {
             throw new DuplicateResourceException("Email already registered: " + request.email());
         }
 
         // Keycloak Admin API interaction.
         // try-with-resources: Keycloak implements AutoCloseable.
-        // Not closing it leaks HTTP connections — critical under load.
         try (Keycloak keycloakAdmin = buildKeycloakAdmin()) {
 
             // Build the Keycloak user representation
