@@ -13,6 +13,8 @@ public interface SeafarerRepository extends JpaRepository<SeafarerT, Long>, JpaS
 
     Optional<SeafarerT> findByPublicId(String publicId);
 
+    Optional<SeafarerT> findBySeamanBookNumber(String seamanBookNumber);
+
     boolean existsBySeamanBookNumber(String seamanBookNumber);
 
 }
