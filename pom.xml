@@ -79,6 +79,18 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!-- ── JSON Nullable ─────────────────────────────────────────
+             Adds JsonNullable<T> to distinguish "field absent" from
+             "field explicitly null" in PATCH request payloads.
+             Register JsonNullableModule with the ObjectMapper to enable
+             Jackson (de)serialization.
+        -->
+        <dependency>
+            <groupId>org.openapitools</groupId>
+            <artifactId>jackson-databind-nullable</artifactId>
+            <version>0.2.6</version>
+        </dependency>
+
         <!-- ── Keycloak Admin Client ──────────────────────────────────
              Used by KeycloakAdminService to create users in Keycloak
              when someone registers through your app.
