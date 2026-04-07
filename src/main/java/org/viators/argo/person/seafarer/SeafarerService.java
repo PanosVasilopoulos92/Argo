@@ -1,5 +1,6 @@
 package org.viators.argo.person.seafarer;
 
+import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -13,8 +14,17 @@ import org.viators.argo.common.exceptions.ResourceNotFoundException;
 import org.viators.argo.person.PersonRepository;
 import org.viators.argo.person.seafarer.dto.request.CreateSeafarerRequest;
 import org.viators.argo.person.seafarer.dto.request.SeafarerSearchFilterRequest;
+import org.viators.argo.person.seafarer.dto.request.patch.PatchBankDetailsRequest;
+import org.viators.argo.person.seafarer.dto.request.patch.PatchPassportRequest;
+import org.viators.argo.person.seafarer.dto.request.patch.PatchPersonalInfoRequest;
+import org.viators.argo.person.seafarer.dto.request.patch.PatchRankRequest;
+import org.viators.argo.person.seafarer.dto.request.patch.PatchRemarksRequest;
+import org.viators.argo.person.seafarer.dto.request.patch.PatchSeamanBookRequest;
 import org.viators.argo.person.seafarer.dto.response.SeafarerDetailsResponse;
 import org.viators.argo.person.seafarer.dto.response.SeafarerSummaryResponse;
+
+import java.util.Objects;
+import java.util.function.Consumer;
 
 @Service
 @RequiredArgsConstructor
@@ -39,6 +49,60 @@ public class SeafarerService {
         seafarer = seafarerRepository.save(seafarer);
 
         return seafarer.getPublicId();
+    }
+
+    @Transactional
+    public SeafarerDetailsResponse patchPersonalInfo(String publicId, PatchPersonalInfoRequest request) {
+        return executeUpdate(publicId, request.getVersion(), request::update);
+    }
+
+    @Transactional
+    public SeafarerDetailsResponse patchPassport(String publicId, PatchPassportRequest request) {
+        SeafarerT seafarer = loadResourceAndCheckVersion(publicId, request.getVersion());
+
+        if (request.getPassportNumber().isPresent()) {
+            String newPassportNumber = request.getPassportNumber().get();
+            seafarerRepository.findByPassportNumber(newPassportNumber)
+                .filter(existing -> !existing.getPublicId().equals(publicId))
+                .ifPresent(existing -> {
+                    throw new DuplicateResourceException("Seafarer", "passportNumber", newPassportNumber);
+                });
+        }
+
+        request.update(seafarer);
+        return SeafarerDetailsResponse.from(seafarerRepository.save(seafarer));
+    }
+
+    @Transactional
+    public SeafarerDetailsResponse patchSeamanBook(String publicId, PatchSeamanBookRequest request) {
+        SeafarerT seafarer = loadResourceAndCheckVersion(publicId, request.getVersion());
+
+        if (request.getSeamanBookNumber().isPresent()) {
+            String newSeamanBookNumber = request.getSeamanBookNumber().get();
+            seafarerRepository.findBySeamanBookNumber(newSeamanBookNumber)
+                .filter(existing -> !existing.getPublicId().equals(publicId))
+                .ifPresent(existing -> {
+                    throw new DuplicateResourceException("Seafarer", "seamanBookNumber", newSeamanBookNumber);
+                });
+        }
+
+        request.update(seafarer);
+        return SeafarerDetailsResponse.from(seafarerRepository.save(seafarer));
+    }
+
+    @Transactional
+    public SeafarerDetailsResponse patchBankDetails(String publicId, PatchBankDetailsRequest request) {
+        return executeUpdate(publicId, request.getVersion(), request::update);
+    }
+
+    @Transactional
+    public SeafarerDetailsResponse patchRemarks(String publicId, PatchRemarksRequest request) {
+        return executeUpdate(publicId, request.getVersion(), request::update);
+    }
+
+    @Transactional
+    public SeafarerDetailsResponse patchRank(String publicId, PatchRankRequest request) {
+        return executeUpdate(publicId, request.getVersion(), request::update);
     }
 
     @Transactional(readOnly = true)
@@ -80,4 +144,25 @@ public class SeafarerService {
         return seafarerRepository.findAll(specs, pageable)
             .map(SeafarerSummaryResponse::from);
     }
+
+
+    // Private Helper methods
+    private SeafarerDetailsResponse executeUpdate(String publicId, Long expectedVersion, Consumer<SeafarerT> updater) {
+        SeafarerT seafarer = loadResourceAndCheckVersion(publicId, expectedVersion);
+
+        updater.accept(seafarer);
+        return SeafarerDetailsResponse.from(seafarerRepository.save(seafarer));
+    }
+
+    private SeafarerT loadResourceAndCheckVersion(String publicId, Long expectedVersion) {
+        SeafarerT seafarer = seafarerRepository.findByPublicId(publicId)
+            .orElseThrow(() -> new ResourceNotFoundException("Seafarer", "publicId", publicId));
+
+        if (!Objects.equals(seafarer.getVersion(), expectedVersion)) {
+            throw new OptimisticLockException("Seafarer was modified by another user. Please reload and try again.");
+        }
+
+        return seafarer;
+    }
+
 }
