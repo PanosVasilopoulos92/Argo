@@ -112,4 +112,18 @@ public class SeafarerController {
     ) {
         return ResponseEntity.ok(seafarerService.patchRemarks(publicId, request));
     }
+
+    @PreAuthorize("hasRole('FOM')")
+    @PatchMapping("/{publicId}/deactivate")
+    public ResponseEntity<Void> deactivateSeafarer(@PathVariable String publicId) {
+        seafarerService.deactivateSeafarer(publicId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize("hasRole('FOM')")
+    @PatchMapping("/{publicId}/reactivate")
+    public ResponseEntity<Void> reactivateSeafarer(@PathVariable String publicId) {
+        seafarerService.reactivateSeafarer(publicId);
+        return ResponseEntity.noContent().build();
+    }
 }
