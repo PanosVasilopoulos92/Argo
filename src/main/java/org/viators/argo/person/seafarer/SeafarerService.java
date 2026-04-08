@@ -9,6 +9,8 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.viators.argo.common.enums.ResourceStatusEnum;
+import org.viators.argo.common.exceptions.BusinessValidationException;
 import org.viators.argo.common.exceptions.DuplicateResourceException;
 import org.viators.argo.common.exceptions.ResourceNotFoundException;
 import org.viators.argo.person.PersonRepository;
@@ -23,6 +25,7 @@ import org.viators.argo.person.seafarer.dto.request.patch.PatchSeamanBookRequest
 import org.viators.argo.person.seafarer.dto.response.SeafarerDetailsResponse;
 import org.viators.argo.person.seafarer.dto.response.SeafarerSummaryResponse;
 
+import java.time.LocalDate;
 import java.util.Objects;
 import java.util.function.Consumer;
 
@@ -103,6 +106,35 @@ public class SeafarerService {
     @Transactional
     public SeafarerDetailsResponse patchRank(String publicId, PatchRankRequest request) {
         return executeUpdate(publicId, request.getVersion(), request::update);
+    }
+
+    @Transactional
+    public void deactivateSeafarer(String publicId) {
+        SeafarerT seafarer = seafarerRepository.findByPublicId(publicId)
+            .orElseThrow(() -> new ResourceNotFoundException("Seafarer", "publicId", publicId));
+
+        if (ResourceStatusEnum.INACTIVE.equals(seafarer.getStatus())) {
+            throw new BusinessValidationException("Seafarer with publicId: %s is already inactive".formatted(publicId));
+        }
+
+        seafarer.setStatus(ResourceStatusEnum.INACTIVE);
+    }
+
+    @Transactional
+    public void reactivateSeafarer(String publicId) {
+        SeafarerT seafarer = seafarerRepository.findByPublicId(publicId)
+            .orElseThrow(() -> new ResourceNotFoundException("Seafarer", "publicId", publicId));
+
+        if (ResourceStatusEnum.ACTIVE.equals(seafarer.getStatus())) {
+            throw new BusinessValidationException("Seafarer with publicId: %s is already active".formatted(publicId));
+        }
+
+        if (seafarer.getPassportExpiryDate().isBefore(LocalDate.now())) {
+            throw new BusinessValidationException("Seafarer's passport has been expired. " +
+                "In order to reactivate him/her update passport expiry date");
+        }
+
+        seafarer.setStatus(ResourceStatusEnum.ACTIVE);
     }
 
     @Transactional(readOnly = true)
