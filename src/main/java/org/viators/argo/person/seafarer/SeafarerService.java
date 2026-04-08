@@ -12,6 +12,7 @@ import org.springframework.util.StringUtils;
 import org.viators.argo.common.enums.ResourceStatusEnum;
 import org.viators.argo.common.exceptions.BusinessValidationException;
 import org.viators.argo.common.exceptions.DuplicateResourceException;
+import org.viators.argo.common.exceptions.InvalidStateException;
 import org.viators.argo.common.exceptions.ResourceNotFoundException;
 import org.viators.argo.person.PersonRepository;
 import org.viators.argo.person.seafarer.dto.request.CreateSeafarerRequest;
@@ -114,7 +115,7 @@ public class SeafarerService {
             .orElseThrow(() -> new ResourceNotFoundException("Seafarer", "publicId", publicId));
 
         if (ResourceStatusEnum.INACTIVE.equals(seafarer.getStatus())) {
-            throw new BusinessValidationException("Seafarer with publicId: %s is already inactive".formatted(publicId));
+            throw new InvalidStateException("Seafarer with publicId: %s is already inactive".formatted(publicId));
         }
 
         seafarer.setStatus(ResourceStatusEnum.INACTIVE);
@@ -126,7 +127,7 @@ public class SeafarerService {
             .orElseThrow(() -> new ResourceNotFoundException("Seafarer", "publicId", publicId));
 
         if (ResourceStatusEnum.ACTIVE.equals(seafarer.getStatus())) {
-            throw new BusinessValidationException("Seafarer with publicId: %s is already active".formatted(publicId));
+            throw new InvalidStateException("Seafarer with publicId: %s is already active".formatted(publicId));
         }
 
         if (seafarer.getPassportExpiryDate().isBefore(LocalDate.now())) {
@@ -137,6 +138,7 @@ public class SeafarerService {
         seafarer.setStatus(ResourceStatusEnum.ACTIVE);
     }
 
+    // Read only methods
     @Transactional(readOnly = true)
     public SeafarerDetailsResponse getByPassportNumber(String passportNumber) {
         SeafarerT seafarer = seafarerRepository.findByPassportNumber(passportNumber)

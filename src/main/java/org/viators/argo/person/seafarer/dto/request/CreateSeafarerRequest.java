@@ -10,11 +10,11 @@ import java.time.LocalDate;
 public record CreateSeafarerRequest(
     @NotBlank(message = "Firstname is required")
     @Size(min = 3, max = 30, message = "Firstname must be between 3-30 characters long")
-    String firstname,
+    String firstName,
 
     @NotBlank(message = "Lastname is required")
     @Size(min = 3, max = 30, message = "Lastname must be between 3-30 characters long")
-    String lastname,
+    String lastName,
 
     @NotBlank(message = "Father's name is required")
     @Size(min = 3, max = 30, message = "Father's name must be between 3-30 characters long")
@@ -22,10 +22,13 @@ public record CreateSeafarerRequest(
 
     @NotNull(message = "Birth date is required")
     @Past(message = "Birth date must be in the past")
-    LocalDate birtDate,
+    LocalDate birthDate,
 
     @NotBlank(message = "Passport number is required")
     String passportNumber,
+
+    @Past(message = "Passport issued date must be in past date")
+    LocalDate passportIssuedDate,
 
     @NotNull(message = "Passport expiry date is required")
     @Future(message = "Passport expiry date must be in future date")
@@ -55,14 +58,15 @@ public record CreateSeafarerRequest(
 
     public SeafarerT toEntity() {
         return SeafarerT.builder()
-            .firstName(firstname)
-            .lastName(lastname)
+            .firstName(firstName)
+            .lastName(lastName)
             .fatherName(fatherName)
-            .birthDate(birtDate)
+            .birthDate(birthDate)
             .passportNumber(passportNumber)
             .passportExpiryDate(passportExpiryDate)
             .nationality(nationality)
             .seamanBookNumber(seamanBookNumber)
+            .sbIssuedAt(sbIssuedAt)
             .sbExpiryDate(sbExpiryDate)
             .rank(seafarerRank)
             .gender(gender)

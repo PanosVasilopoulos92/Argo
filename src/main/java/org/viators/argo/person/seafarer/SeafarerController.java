@@ -50,8 +50,9 @@ public class SeafarerController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/filter")
     public ResponseEntity<Page<SeafarerSummaryResponse>> getSeafarersFiltered(
-        @Valid @RequestBody SeafarerSearchFilterRequest request,
+        @Valid @ModelAttribute SeafarerSearchFilterRequest request,
         @PageableDefault(sort = "lastName", direction = Sort.Direction.ASC) Pageable pageable
         ) {
 
