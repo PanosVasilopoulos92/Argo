@@ -179,6 +179,12 @@ public class SeafarerService {
             .map(SeafarerSummaryResponse::from);
     }
 
+    @Transactional(readOnly = true)
+    public SeafarerT getResourceByPublicId(String publicId) {
+        return seafarerRepository.findByPublicId(publicId)
+            .orElseThrow(() -> new ResourceNotFoundException("Seafarer", "publicId", publicId));
+    }
+
 
     // Private Helper methods
     private SeafarerDetailsResponse executeUpdate(String publicId, Long expectedVersion, Consumer<SeafarerT> updater) {

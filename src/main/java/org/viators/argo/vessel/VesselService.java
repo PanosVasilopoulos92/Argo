@@ -3,7 +3,6 @@ package org.viators.argo.vessel;
 import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.StaleStateException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -25,11 +24,11 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional
 public class VesselService {
 
     private final VesselRepository vesselRepository;
 
+    @Transactional
     public String create(CreateVesselRequest request) {
 
         operationIsValid(request.vesselName(), request.mmsiNumber(), request.callSign(), request.imoNumber());
@@ -40,6 +39,7 @@ public class VesselService {
         return vessel.getPublicId();
     }
 
+    @Transactional
     public VesselDetailsResponse updateVesselInfo(String publicId, UpdateVesselInfoRequest request) {
 
         VesselT vessel = vesselRepository.findByPublicId(publicId)
@@ -55,6 +55,7 @@ public class VesselService {
         return VesselDetailsResponse.from(vessel);
     }
 
+    @Transactional
     public void deactivateVessel(String publicId) {
         VesselT vessel = vesselRepository.findByPublicId(publicId)
             .orElseThrow(() -> new ResourceNotFoundException("Vessel", "publicId", publicId));
@@ -66,6 +67,7 @@ public class VesselService {
         vessel.setStatus(ResourceStatusEnum.INACTIVE);
     }
 
+    @Transactional
     public void reactivateVessel(String publicId) {
         VesselT vessel = vesselRepository.findByPublicId(publicId)
             .orElseThrow(() -> new ResourceNotFoundException("Vessel", "publicId", publicId));
@@ -119,6 +121,12 @@ public class VesselService {
 
         return vesselRepository.findAll(specs, pageable)
             .map(VesselSummaryResponse::from);
+    }
+
+    @Transactional(readOnly = true)
+    public VesselT getResourceByPublicId(String publicId) {
+        return vesselRepository.findByPublicId(publicId)
+            .orElseThrow(() -> new ResourceNotFoundException("Vessel", "publicId", publicId));
     }
 
     // Helper private methods
