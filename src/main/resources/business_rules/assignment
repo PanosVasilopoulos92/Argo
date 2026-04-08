@@ -1,0 +1,13 @@
+Business Rules:
+
+BR-026: A seafarer can have at most one active assignment at any time. An active assignment is one where the actual sign-off date has not been recorded.
+Rationale: A person cannot physically be on two vessels simultaneously. This is also a regulatory requirement for flag state records.
+
+BR-027: The assignment rank may differ from the seafarer's current rank. Rationale: Operational flexibility — a Chief Officer might sail as Master on a
+smaller vessel, or a Second Engineer might fill in as Chief Engineer. The assignment records what role they're actually performing.
+
+BR-028: Only ACTIVE vessels can receive crew assignments. Rationale: You cannot staff a vessel that is out of service.
+
+BR-029: Only ACTIVE seafarers can be assigned to vessels. Rationale: Inactive seafarers are not available for deployment.
+
+BR-030: Sign-on date is mandatory. Rationale: Every assignment must have a clear start date for regulatory, payroll, and operational tracking.
