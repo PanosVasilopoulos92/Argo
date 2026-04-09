@@ -56,7 +56,7 @@ public record SeafarerDetailsResponse(
             entity.getGender(),
             entity.getPassportNumber(),
             entity.getPassportExpiryDate(),
-            entity.getPassportIssued(),
+            entity.getPassportIssuedDate(),
             entity.getRemarks(),
             entity.getBankName(),
             entity.getBankAccount(),
