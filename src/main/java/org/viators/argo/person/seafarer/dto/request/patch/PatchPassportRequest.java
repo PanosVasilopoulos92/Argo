@@ -22,7 +22,7 @@ public class PatchPassportRequest {
     private JsonNullable<String> passportNumber = JsonNullable.undefined();
 
     @Past(message = "Passport issued date must be in the past")
-    private JsonNullable<LocalDate> passportIssued = JsonNullable.undefined();
+    private JsonNullable<LocalDate> passportIssuedDate = JsonNullable.undefined();
 
     @Future(message = "Passport expiry date must be in the future")
     private JsonNullable<LocalDate> passportExpiryDate = JsonNullable.undefined();
@@ -32,7 +32,7 @@ public class PatchPassportRequest {
 
     public void update(SeafarerT entity) {
         applyIfPresent(passportNumber, entity::setPassportNumber);
-        applyIfPresent(passportIssued, entity::setPassportIssued);
+        applyIfPresent(passportIssuedDate, entity::setPassportIssuedDate);
         applyIfPresent(passportExpiryDate, entity::setPassportExpiryDate);
     }
 }

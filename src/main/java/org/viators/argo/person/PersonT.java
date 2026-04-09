@@ -50,7 +50,7 @@ public abstract class PersonT extends BaseEntity {
     private LocalDate passportExpiryDate;
 
     @Column(name = "passport_issued")
-    private LocalDate passportIssued;
+    private LocalDate passportIssuedDate;
 
     @Column(name = "remarks")
     private String remarks;
