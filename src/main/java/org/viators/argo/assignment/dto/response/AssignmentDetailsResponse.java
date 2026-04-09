@@ -17,7 +17,29 @@ public record AssignmentDetailsResponse(
     LocalDate expectedSignOffDate,
     LocalDate actualSignedOffDate,
     String signOnPort,
+    String signOffPort,
     String remarks,
+    String signOffRemarks,
     ResourceStatusEnum status
 ) {
+
+    public static AssignmentDetailsResponse from(AssignmentT entity) {
+        return new AssignmentDetailsResponse(
+            entity.getPublicId(),
+            entity.getSeafarer().getPublicId(),
+            entity.getSeafarer().getFirstName() + " " + entity.getSeafarer().getLastName(),
+            entity.getVessel().getPublicId(),
+            entity.getVessel().getVesselName(),
+            entity.getAssignmentRank(),
+            entity.getSignOnDate(),
+            entity.getExpectedSignOffDate(),
+            entity.getActualSignedOffDate(),
+            entity.getSignOnPort(),
+            entity.getSignOffPort(),
+            entity.getRemarks(),
+            entity.getSignOffRemarks(),
+            entity.getStatus()
+        );
+    }
+
 }

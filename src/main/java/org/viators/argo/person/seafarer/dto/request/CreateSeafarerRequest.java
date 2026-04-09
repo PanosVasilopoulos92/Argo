@@ -63,6 +63,7 @@ public record CreateSeafarerRequest(
             .fatherName(fatherName)
             .birthDate(birthDate)
             .passportNumber(passportNumber)
+            .passportIssuedDate(passportIssuedDate)
             .passportExpiryDate(passportExpiryDate)
             .nationality(nationality)
             .seamanBookNumber(seamanBookNumber)
