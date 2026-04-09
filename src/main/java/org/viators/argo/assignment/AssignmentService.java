@@ -5,9 +5,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.viators.argo.assignment.dto.request.CreateAssignmentRequest;
+import org.viators.argo.assignment.dto.request.SignOffSeafarerRequest;
+import org.viators.argo.assignment.dto.response.AssignmentDetailsResponse;
 import org.viators.argo.common.enums.ResourceStatusEnum;
 import org.viators.argo.common.exceptions.BusinessValidationException;
 import org.viators.argo.common.exceptions.InvalidStateException;
+import org.viators.argo.common.exceptions.ResourceNotFoundException;
 import org.viators.argo.person.seafarer.SeafarerService;
 import org.viators.argo.person.seafarer.SeafarerT;
 import org.viators.argo.vessel.VesselService;
@@ -37,6 +40,26 @@ public class AssignmentService {
 
         assignment = assignmentRepository.save(assignment);
         return assignment.getPublicId();
+    }
+
+    @Transactional
+    public AssignmentDetailsResponse signOffSeafarer(String assignmentPublicId, SignOffSeafarerRequest request) {
+        AssignmentT assignment =
+            assignmentRepository.findByPublicId(assignmentPublicId)
+                .orElseThrow(() -> new ResourceNotFoundException("Assignment", "publicId", assignmentPublicId));
+
+        if (ResourceStatusEnum.INACTIVE.equals(assignment.getStatus())) {
+            throw new BusinessValidationException("Assignment with public Id: %s is already inactive/completed");
+        }
+
+        if (assignment.getSignOnDate().isAfter(request.actualSignedOffDate())) {
+            throw new BusinessValidationException("Sign on date cannot be after sign off date");
+        }
+
+        request.signOffSeafarer(assignment);
+        assignment.setStatus(ResourceStatusEnum.INACTIVE);
+
+        return AssignmentDetailsResponse.from(assignment);
     }
 
     // Helper private methods

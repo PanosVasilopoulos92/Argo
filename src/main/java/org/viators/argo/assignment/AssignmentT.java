@@ -47,6 +47,12 @@ public class AssignmentT extends BaseEntity {
     @Column(name = "sign_on_port", nullable = false, length = 100)
     private String signOnPort;
 
+    @Column(name = "sign_off_port", length = 100)
+    private String signOffPort;
+
     @Column(name = "remarks")
     private String remarks;
+
+    @Column(name = "sign_off_remarks", length = 500)
+    private String signOffRemarks;
 }
