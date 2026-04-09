@@ -2,11 +2,14 @@ package org.viators.argo.assignment;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.viators.argo.assignment.dto.request.CreateAssignmentRequest;
 import org.viators.argo.assignment.dto.request.SignOffSeafarerRequest;
 import org.viators.argo.assignment.dto.response.AssignmentDetailsResponse;
+import org.viators.argo.assignment.dto.response.CrewRosterResponse;
 import org.viators.argo.common.enums.ResourceStatusEnum;
 import org.viators.argo.common.exceptions.BusinessValidationException;
 import org.viators.argo.common.exceptions.InvalidStateException;
@@ -60,6 +63,13 @@ public class AssignmentService {
         assignment.setStatus(ResourceStatusEnum.INACTIVE);
 
         return AssignmentDetailsResponse.from(assignment);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<CrewRosterResponse> getCurrentCrewRosterForVessel(String vesselPublicId, Pageable pageable) {
+        return assignmentRepository.findByVessel_PublicIdAndStatusAndActualSignedOffDateIsNull(
+                vesselPublicId, ResourceStatusEnum.ACTIVE, pageable)
+            .map(CrewRosterResponse::from);
     }
 
     // Helper private methods
