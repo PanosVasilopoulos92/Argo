@@ -2,11 +2,13 @@ package org.viators.argo.certificate.vessel;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.viators.argo.certificate.CertificateRepository;
-import org.viators.argo.certificate.CertificateT;
 import org.viators.argo.certificate.vessel.dto.request.CreateVesselCertificateRequest;
+import org.viators.argo.certificate.vessel.dto.response.VesselCertificateSummaryResponse;
 import org.viators.argo.common.exceptions.BusinessValidationException;
 import org.viators.argo.common.exceptions.DuplicateResourceException;
 import org.viators.argo.vessel.VesselService;
@@ -38,6 +40,12 @@ public class VesselCertificateService {
         vesselCertificateRepository.save(vesselCertificate);
 
         return vesselCertificate.getPublicId();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<VesselCertificateSummaryResponse> getCertificatesForVessel(String vesselPublicId, Pageable pageable) {
+        return vesselCertificateRepository.findByVessel_PublicId(vesselPublicId, pageable)
+            .map(VesselCertificateSummaryResponse::from);
     }
 
 }

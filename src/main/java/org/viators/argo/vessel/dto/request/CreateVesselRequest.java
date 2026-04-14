@@ -1,7 +1,6 @@
 package org.viators.argo.vessel.dto.request;
 
 import jakarta.validation.constraints.*;
-import org.springframework.security.core.parameters.P;
 import org.viators.argo.vessel.VesselT;
 import org.viators.argo.vessel.enums.ClassificationSocietyEnum;
 import org.viators.argo.vessel.enums.VesselTypeEnum;
@@ -51,20 +50,20 @@ public record CreateVesselRequest(
 ) {
 
     public VesselT toEntity() {
-        return new VesselT(
-            vesselName,
-            imoNumber,
-            mmsiNumber,
-            callSign,
-            flagState,
-            vesselType,
-            grossTonnage,
-            netTonnage,
-            deadWeightTonnage,
-            yearBuild,
-            builder,
-            classificationSociety,
-            portOfRegistry
-        );
+        return VesselT.builder()
+            .vesselName(vesselName)
+            .imoNumber(imoNumber)
+            .mmsiNumber(mmsiNumber)
+            .callSign(callSign)
+            .flagState(flagState)
+            .vesselType(vesselType)
+            .grossTonnage(grossTonnage)
+            .netTonnage(netTonnage)
+            .deadWeightTonnage(deadWeightTonnage)
+            .yearBuild(yearBuild)
+            .builder(builder)
+            .classificationSociety(classificationSociety)
+            .portOfRegistry(portOfRegistry)
+            .build();
     }
 }
