@@ -11,3 +11,20 @@ BR-028: Only ACTIVE vessels can receive crew assignments. Rationale: You cannot 
 BR-029: Only ACTIVE seafarers can be assigned to vessels. Rationale: Inactive seafarers are not available for deployment.
 
 BR-030: Sign-on date is mandatory. Rationale: Every assignment must have a clear start date for regulatory, payroll, and operational tracking.
+
+BR-031: Sign-off date must be on or after the sign-on date. Rationale: A seafarer cannot leave a vessel before they boarded.
+
+BR-032: Sign-off is a one-time action. Once an assignment is completed, it cannot be modified. Rationale: Completed assignments are historical records
+used for regulatory reporting and payroll. Tampering breaks compliance.
+
+BR-033: Signing off a seafarer does not change the seafarer's status. They remain ACTIVE and available for new assignments. Rationale: Completing a voyage
+is normal operations, not a status change.
+
+BR-034: The crew roster shows only active assignments (where actual sign-off date is null). Rationale: The roster answers "who is on board right now",
+not "who has ever been on board."
+
+BR-035: Only ACTIVE assignments can be cancelled. Completed assignments are historical records and must not be altered. Rationale:
+Regulatory and payroll compliance.
+
+BR-036: Cancellation is a soft status change, not a delete. The record persists for audit purposes. Rationale: Traceability — if an assignment
+was created and then cancelled, that action trail should be visible.

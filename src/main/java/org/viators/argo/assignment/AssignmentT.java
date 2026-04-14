@@ -55,4 +55,8 @@ public class AssignmentT extends BaseEntity {
 
     @Column(name = "sign_off_remarks", length = 500)
     private String signOffRemarks;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "assignment_state")
+    private AssignmentStateEnum assignmentState;
 }
