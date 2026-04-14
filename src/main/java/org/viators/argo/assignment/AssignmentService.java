@@ -9,6 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.viators.argo.assignment.dto.request.CreateAssignmentRequest;
 import org.viators.argo.assignment.dto.request.SignOffSeafarerRequest;
 import org.viators.argo.assignment.dto.response.AssignmentDetailsResponse;
+import org.viators.argo.assignment.dto.response.AssignmentsHistOfVesselResponse;
+import org.viators.argo.assignment.dto.response.AssignmentsHistOfSeafarerResponse;
 import org.viators.argo.assignment.dto.response.CrewRosterResponse;
 import org.viators.argo.common.enums.ResourceStatusEnum;
 import org.viators.argo.common.exceptions.BusinessValidationException;
@@ -60,7 +62,7 @@ public class AssignmentService {
         }
 
         request.signOffSeafarer(assignment);
-        assignment.setStatus(ResourceStatusEnum.INACTIVE);
+        assignment.setAssignmentState(AssignmentStateEnum.COMPLETED);
 
         return AssignmentDetailsResponse.from(assignment);
     }
@@ -82,6 +84,16 @@ public class AssignmentService {
         return assignmentRepository.findByVessel_PublicIdAndAssignmentStateAndActualSignedOffDateIsNull(
                 vesselPublicId, AssignmentStateEnum.ACTIVE, pageable)
             .map(CrewRosterResponse::from);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<AssignmentsHistOfSeafarerResponse> getAssignmentsHistForSeafarer(String seafarerPublicId, Pageable pageable) {
+        return assignmentRepository.findAssignmentHistForSeaman(seafarerPublicId, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<AssignmentsHistOfVesselResponse> getAssignmentsHistForVessel(String vesselPublicId, Pageable pageable) {
+        return assignmentRepository.findAssignmentsHistForVessel(vesselPublicId, pageable);
     }
 
     // Helper private methods

@@ -57,6 +57,7 @@ public class AssignmentT extends BaseEntity {
     private String signOffRemarks;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "assignment_state")
-    private AssignmentStateEnum assignmentState;
+    @Column(name = "assignment_state", nullable = false)
+    @Builder.Default
+    private AssignmentStateEnum assignmentState = AssignmentStateEnum.ACTIVE;
 }
