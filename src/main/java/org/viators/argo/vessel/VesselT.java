@@ -3,9 +3,12 @@ package org.viators.argo.vessel;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.viators.argo.certificate.vessel.VesselCertificateT;
 import org.viators.argo.common.entity.BaseEntity;
 import org.viators.argo.vessel.enums.ClassificationSocietyEnum;
 import org.viators.argo.vessel.enums.VesselTypeEnum;
+
+import java.util.Set;
 
 @Entity
 @Table(name = "vessels")
@@ -58,4 +61,14 @@ public class VesselT extends BaseEntity {
     @Column(name = "port_of_registry", length = 100)
     private String portOfRegistry;
 
+    @OneToMany(mappedBy = "vessel", fetch = FetchType.LAZY)
+    private Set<VesselCertificateT> certificates;
+
+    // Helper methods
+    public void addCertificate(VesselCertificateT certificate) {
+        if (!certificates.contains(certificate)) {
+            certificates.add(certificate);
+            certificate.setVessel(this);
+        }
+    }
 }
