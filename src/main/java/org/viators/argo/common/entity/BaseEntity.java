@@ -15,6 +15,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import org.viators.argo.common.enums.ResourceStatusEnum;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.UUID;
 
 @MappedSuperclass
@@ -62,5 +63,18 @@ public abstract class BaseEntity {
         if (publicId == null) {
             publicId = UUID.randomUUID().toString();
         }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        BaseEntity that = (BaseEntity) o;
+        return publicId != null && publicId.equals(that.publicId);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
     }
 }
