@@ -3,10 +3,12 @@ package org.viators.argo.person;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.viators.argo.certificate.person.PersonCertificateT;
 import org.viators.argo.common.entity.BaseEntity;
 import org.viators.argo.common.enums.GenderEnum;
 
 import java.time.LocalDate;
+import java.util.Set;
 
 @Entity
 @Table(name = "persons")
@@ -60,4 +62,22 @@ public abstract class PersonT extends BaseEntity {
 
     @Column(name = "bank_account", length = 20)
     private String bankAccount;
+
+    @OneToMany(mappedBy = "person", fetch = FetchType.LAZY)
+    private Set<PersonCertificateT> certificates;
+
+    // Helper methods
+    public void addCertificate(PersonCertificateT certificate) {
+        if (!certificates.contains(certificate)) {
+            certificates.add(certificate);
+            certificate.setPerson(this);
+        }
+    }
+
+    public void removeCertificate(PersonCertificateT certificate) {
+        if (certificates.contains(certificate)) {
+            certificates.remove(certificate);
+            certificate.setPerson(null);
+        }
+    }
 }
