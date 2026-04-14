@@ -55,13 +55,13 @@ public class AssignmentController {
     }
 
     @PreAuthorize("hasRole('FOM')")
-    @DeleteMapping("/{assignmentPublicId}")
+    @PatchMapping("/{assignmentPublicId}")
     public ResponseEntity<Void> cancelAssignment(@PathVariable String assignmentPublicId) {
         assignmentService.cancelAssignment(assignmentPublicId);
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/assignments-history/seafarer/{seafarerPublicId}/")
+    @GetMapping("/assignments-history/seafarer/{seafarerPublicId}")
     public ResponseEntity<Page<AssignmentsHistOfSeafarerResponse>> getSeafarerAssignmentsHist(
         @PathVariable() String seafarerPublicId,
         @PageableDefault Pageable pageable
@@ -72,7 +72,7 @@ public class AssignmentController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/assignments-history/vessel/{vesselPublicId}/")
+    @GetMapping("/assignments-history/vessel/{vesselPublicId}")
     public ResponseEntity<Page<AssignmentsHistOfVesselResponse>> getVesselAssignmentsHist(
         @PathVariable() String vesselPublicId,
         @PageableDefault Pageable pageable
