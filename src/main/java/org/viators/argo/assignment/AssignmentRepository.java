@@ -21,7 +21,7 @@ public interface AssignmentRepository extends JpaRepository<AssignmentT, Long> {
     Page<AssignmentT> findByVessel_PublicIdAndAssignmentStateAndActualSignedOffDateIsNull(
         String vesselPublicId, AssignmentStateEnum status, Pageable pageable);
 
-    Optional<AssignmentT> findBySeafarer_PublicIdAndActualSignedOffDateIsNotNull(String seafarerPublicId);
+    Optional<AssignmentT> findBySeafarer_PublicIdAndActualSignedOffDateIsNull(String seafarerPublicId);
 
     @Query("""
         SELECT NEW org.viators.argo.assignment.dto.response.AssignmentsHistOfSeafarerResponse(
@@ -61,13 +61,6 @@ public interface AssignmentRepository extends JpaRepository<AssignmentT, Long> {
            join a.seafarer s
            where a.vessel.publicId = :vesselPublicId
            and a.assignmentState != org.viators.argo.assignment.AssignmentStateEnum.CANCELLED
-           group by s.publicId,
-            a.assignmentRank,
-            a.signOnDate,
-            a.actualSignedOffDate,
-            a.signOnPort,
-            a.signOffPort,
-            a.assignmentState
            order by a.signOnDate desc, a.assignmentState
            """)
     Page<AssignmentsHistOfVesselResponse> findAssignmentsHistForVessel(

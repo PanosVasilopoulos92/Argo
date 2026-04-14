@@ -1,5 +1,6 @@
 package org.viators.argo.assignment.dto.response;
 
+import org.viators.argo.assignment.AssignmentStateEnum;
 import org.viators.argo.assignment.AssignmentT;
 import org.viators.argo.common.enums.ResourceStatusEnum;
 import org.viators.argo.person.seafarer.enums.SeafarerRankEnum;
@@ -20,7 +21,7 @@ public record AssignmentDetailsResponse(
     String signOffPort,
     String remarks,
     String signOffRemarks,
-    ResourceStatusEnum status
+    AssignmentStateEnum assignmentState
 ) {
 
     public static AssignmentDetailsResponse from(AssignmentT entity) {
@@ -38,7 +39,7 @@ public record AssignmentDetailsResponse(
             entity.getSignOffPort(),
             entity.getRemarks(),
             entity.getSignOffRemarks(),
-            entity.getStatus()
+            entity.getAssignmentState()
         );
     }
 

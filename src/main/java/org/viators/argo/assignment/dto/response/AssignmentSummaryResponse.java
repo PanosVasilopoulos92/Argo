@@ -1,6 +1,6 @@
 package org.viators.argo.assignment.dto.response;
 
-import org.viators.argo.common.enums.ResourceStatusEnum;
+import org.viators.argo.assignment.AssignmentStateEnum;
 
 import java.time.LocalDate;
 
@@ -10,6 +10,6 @@ public record AssignmentSummaryResponse(
     String vesselPublicId,
     LocalDate signOnDate,
     LocalDate actualSignedOffDate,
-    ResourceStatusEnum status
+    AssignmentStateEnum assignmentState
 ) {
 }
