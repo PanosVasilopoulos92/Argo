@@ -73,11 +73,4 @@ public abstract class PersonT extends BaseEntity {
             certificate.setPerson(this);
         }
     }
-
-    public void removeCertificate(PersonCertificateT certificate) {
-        if (certificates.contains(certificate)) {
-            certificates.remove(certificate);
-            certificate.setPerson(null);
-        }
-    }
 }
