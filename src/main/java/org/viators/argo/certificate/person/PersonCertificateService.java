@@ -2,11 +2,14 @@ package org.viators.argo.certificate.person;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.viators.argo.certificate.CertificateRepository;
 import org.viators.argo.certificate.CertificateT;
 import org.viators.argo.certificate.person.dto.request.CreatePersonCertificateRequest;
+import org.viators.argo.certificate.person.dto.response.PersonCertificateSummaryResponse;
 import org.viators.argo.common.exceptions.BusinessValidationException;
 import org.viators.argo.common.exceptions.DuplicateResourceException;
 import org.viators.argo.common.exceptions.ResourceNotFoundException;
@@ -42,5 +45,11 @@ public class PersonCertificateService {
 
         personCertificateRepository.save(certificate);
         return certificate.getPublicId();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PersonCertificateSummaryResponse> getCertificatesForPerson(String personPublicId, Pageable pageable) {
+        return personCertificateRepository.findByPerson_PublicId(personPublicId, pageable)
+            .map(PersonCertificateSummaryResponse::from);
     }
 }
