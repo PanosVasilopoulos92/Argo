@@ -35,7 +35,7 @@ public class AssignmentController {
     }
 
     @PreAuthorize("hasRole('FOM')")
-    @PatchMapping("/{publicId}")
+    @PatchMapping("/{publicId}/sign-off")
     public ResponseEntity<AssignmentDetailsResponse> signOffSeafarer(
         @PathVariable String publicId,
         @Valid @RequestBody SignOffSeafarerRequest request) {
@@ -44,7 +44,7 @@ public class AssignmentController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/crew-roaster/{vesselPublicId}")
+    @GetMapping("/crew-roster/{vesselPublicId}")
     public ResponseEntity<Page<CrewRosterResponse>> getCurrentCrewRosterForVessel(
         @PathVariable String vesselPublicId,
         @PageableDefault(sort = "assignmentRank", direction = Sort.Direction.ASC) Pageable pageable
