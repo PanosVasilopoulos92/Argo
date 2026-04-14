@@ -65,10 +65,22 @@ public class AssignmentService {
         return AssignmentDetailsResponse.from(assignment);
     }
 
+    @Transactional
+    public void cancelAssignment(String assignmentPublicId) {
+        AssignmentT assignment = assignmentRepository.findByPublicId(assignmentPublicId)
+            .orElseThrow(() -> new ResourceNotFoundException("Assignment", "publicId", assignmentPublicId));
+
+        if (!AssignmentStateEnum.ACTIVE.equals(assignment.getAssignmentState())) {
+            throw new InvalidStateException("Assignment with public Id: %s is not active. Reconsider your action.");
+        }
+
+        assignment.setAssignmentState(AssignmentStateEnum.CANCELLED);
+    }
+
     @Transactional(readOnly = true)
     public Page<CrewRosterResponse> getCurrentCrewRosterForVessel(String vesselPublicId, Pageable pageable) {
-        return assignmentRepository.findByVessel_PublicIdAndStatusAndActualSignedOffDateIsNull(
-                vesselPublicId, ResourceStatusEnum.ACTIVE, pageable)
+        return assignmentRepository.findByVessel_PublicIdAndAssignmentStateAndActualSignedOffDateIsNull(
+                vesselPublicId, AssignmentStateEnum.ACTIVE, pageable)
             .map(CrewRosterResponse::from);
     }
 

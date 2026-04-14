@@ -51,4 +51,10 @@ public class AssignmentController {
         Page<CrewRosterResponse> response = assignmentService.getCurrentCrewRosterForVessel(vesselPublicId, pageable);
         return ResponseEntity.ok(response);
     }
+
+    @DeleteMapping("/{assignmentPublicId}")
+    public ResponseEntity<Void> cancelAssignment(@PathVariable String assignmentPublicId) {
+        assignmentService.cancelAssignment(assignmentPublicId);
+        return ResponseEntity.noContent().build();
+    }
 }
