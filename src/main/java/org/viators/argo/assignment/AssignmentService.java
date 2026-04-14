@@ -53,8 +53,8 @@ public class AssignmentService {
             assignmentRepository.findByPublicId(assignmentPublicId)
                 .orElseThrow(() -> new ResourceNotFoundException("Assignment", "publicId", assignmentPublicId));
 
-        if (ResourceStatusEnum.INACTIVE.equals(assignment.getStatus())) {
-            throw new BusinessValidationException("Assignment with public Id: %s is already inactive/completed");
+        if (!AssignmentStateEnum.ACTIVE.equals(assignment.getAssignmentState())) {
+            throw new BusinessValidationException("Assignment with public Id: %s is not active".formatted(assignmentPublicId));
         }
 
         if (assignment.getSignOnDate().isAfter(request.actualSignedOffDate())) {
@@ -114,7 +114,7 @@ public class AssignmentService {
                     .formatted(vesselPublicId));
         }
 
-        assignmentRepository.findBySeafarer_PublicIdAndActualSignedOffDateIsNotNull(seafarerPublicId)
+        assignmentRepository.findBySeafarer_PublicIdAndActualSignedOffDateIsNull(seafarerPublicId)
             .ifPresent(existing -> {
                 throw new InvalidStateException(
                     "Seaman already deployed to another vessel." +
