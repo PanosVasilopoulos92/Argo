@@ -9,7 +9,12 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.viators.argo.assignment.AssignmentQueryService;
+import org.viators.argo.assignment.AssignmentService;
+import org.viators.argo.assignment.AssignmentT;
+import org.viators.argo.assignment.dto.response.CrewRosterResponse;
 import org.viators.argo.common.enums.ResourceStatusEnum;
+import org.viators.argo.common.exceptions.BusinessValidationException;
 import org.viators.argo.common.exceptions.DuplicateResourceException;
 import org.viators.argo.common.exceptions.InvalidStateException;
 import org.viators.argo.common.exceptions.ResourceNotFoundException;
@@ -20,6 +25,7 @@ import org.viators.argo.vessel.dto.response.VesselDetailsResponse;
 import org.viators.argo.vessel.dto.response.VesselSummaryResponse;
 
 import java.util.Objects;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +33,7 @@ import java.util.Objects;
 public class VesselService {
 
     private final VesselRepository vesselRepository;
+    private final AssignmentQueryService assignmentQueryService;
 
     @Transactional
     public String create(CreateVesselRequest request) {
@@ -62,6 +69,14 @@ public class VesselService {
 
         if (!ResourceStatusEnum.ACTIVE.equals(vessel.getStatus())) {
             throw new InvalidStateException("Vessel with publicId: %s is already deactivated".formatted(publicId));
+        }
+
+        Set<AssignmentT> results = assignmentQueryService.getCurrentCrewRosterForVessel(vessel.getPublicId());
+        if (!results.isEmpty()) {
+            throw new BusinessValidationException(
+                "For vessel with public Id: %s are %d active assignment right now. In order to deactivate vessel please first cancel the assignments"
+                    .formatted(vessel.getPublicId(), results.size())
+            );
         }
 
         vessel.setStatus(ResourceStatusEnum.INACTIVE);
