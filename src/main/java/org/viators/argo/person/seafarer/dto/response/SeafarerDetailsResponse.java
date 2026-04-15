@@ -5,6 +5,7 @@ import org.viators.argo.common.enums.ResourceStatusEnum;
 import org.viators.argo.person.seafarer.SeafarerT;
 import org.viators.argo.person.seafarer.enums.SeafarerRankEnum;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -12,8 +13,8 @@ public record SeafarerDetailsResponse(
     // BaseEntity fields
     String publicId,
     ResourceStatusEnum status,
-    LocalDateTime createdAt,
-    LocalDateTime updatedAt,
+    Instant createdAt,
+    Instant updatedAt,
     Long version,
 
     // PersonT fields
