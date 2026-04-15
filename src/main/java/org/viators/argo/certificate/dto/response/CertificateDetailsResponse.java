@@ -63,6 +63,10 @@ public record CertificateDetailsResponse(
     }
 
     private static Long calcDaysUntilExpiry(LocalDate expiryDate) {
+        if (expiryDate == null) {
+            return null;
+        }
+
         return ChronoUnit.DAYS.between(LocalDate.now(), expiryDate);
     }
 }

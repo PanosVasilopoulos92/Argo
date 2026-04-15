@@ -25,7 +25,7 @@ public class PersonCertificateController {
     public ResponseEntity<String> create(@Valid @RequestBody CreatePersonCertificateRequest request) {
         String personCertificatePublicId = personCertificateService.create(request);
         return ResponseEntity
-            .created(URI.create("/api/v1/person-certificates" + personCertificatePublicId))
+            .created(URI.create("/api/v1/person-certificates/" + personCertificatePublicId))
             .body(personCertificatePublicId);
     }
 
