@@ -5,6 +5,7 @@ import org.viators.argo.vessel.VesselT;
 import org.viators.argo.vessel.enums.ClassificationSocietyEnum;
 import org.viators.argo.vessel.enums.VesselTypeEnum;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 public record VesselDetailsResponse(
@@ -23,8 +24,8 @@ public record VesselDetailsResponse(
     ClassificationSocietyEnum classificationSociety,
     String portOfRegistry,
     ResourceStatusEnum status,
-    LocalDateTime createdAt,
-    LocalDateTime updatedAt,
+    Instant createdAt,
+    Instant updatedAt,
     Long version
 ) {
 
