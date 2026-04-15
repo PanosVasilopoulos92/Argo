@@ -12,6 +12,7 @@ import org.viators.argo.certificate.dto.response.CertificateDetailsResponse;
 import org.viators.argo.certificate.dto.response.CertificateOverviewResponse;
 import org.viators.argo.common.exceptions.ResourceNotFoundException;
 
+import java.time.LocalDate;
 import java.util.Objects;
 
 @Service
@@ -36,8 +37,11 @@ public class CertificateService {
 
 
     @Transactional(readOnly = true)
-    public Page<CertificateOverviewResponse> getCertifications(Pageable pageable) {
-        return certificateRepository.findAll(pageable)
+    public Page<CertificateOverviewResponse> getCertifications(int daysUntilExpiry, Pageable pageable) {
+        LocalDate today = LocalDate.now();
+        LocalDate expiredAt = today.plusDays(daysUntilExpiry);
+
+        return certificateRepository.getCertificatesExpiringAt(today, expiredAt, pageable)
             .map(CertificateOverviewResponse::from);
     }
 }
