@@ -11,6 +11,7 @@ import org.viators.argo.assignment.dto.response.AssignmentsHistOfVesselResponse;
 import org.viators.argo.assignment.dto.response.AssignmentsHistOfSeafarerResponse;
 
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface AssignmentRepository extends JpaRepository<AssignmentT, Long> {
@@ -20,6 +21,12 @@ public interface AssignmentRepository extends JpaRepository<AssignmentT, Long> {
 
     Page<AssignmentT> findByVessel_PublicIdAndAssignmentStateAndActualSignedOffDateIsNull(
         String vesselPublicId, AssignmentStateEnum status, Pageable pageable);
+
+    Set<AssignmentT> findByVessel_PublicIdAndAssignmentStateAndActualSignedOffDateIsNull(
+        String vesselPublicId, AssignmentStateEnum status);
+
+    boolean existsBySeafarer_PublicIdAndAssignmentStateAndActualSignedOffDateIsNull(
+        String vesselPublicId, AssignmentStateEnum status);
 
     Optional<AssignmentT> findBySeafarer_PublicIdAndActualSignedOffDateIsNull(String seafarerPublicId);
 

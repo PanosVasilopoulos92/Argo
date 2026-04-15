@@ -9,6 +9,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.viators.argo.assignment.AssignmentQueryService;
 import org.viators.argo.common.enums.ResourceStatusEnum;
 import org.viators.argo.common.exceptions.BusinessValidationException;
 import org.viators.argo.common.exceptions.DuplicateResourceException;
@@ -37,6 +38,7 @@ public class SeafarerService {
 
     private final PersonRepository personRepository;
     private final SeafarerRepository seafarerRepository;
+    private final AssignmentQueryService assignmentQueryService;
 
     @Transactional
     public String create(CreateSeafarerRequest request) {
@@ -116,6 +118,11 @@ public class SeafarerService {
 
         if (ResourceStatusEnum.INACTIVE.equals(seafarer.getStatus())) {
             throw new InvalidStateException("Seafarer with publicId: %s is already inactive".formatted(publicId));
+        }
+
+        if (assignmentQueryService.hasSeafarerActiveAssignment(seafarer.getPublicId())) {
+            throw new BusinessValidationException("Seafarer with public Id: %s cannot be deactivated because he/she has an active assignment"
+                .formatted(seafarer.getPublicId()));
         }
 
         seafarer.setStatus(ResourceStatusEnum.INACTIVE);
