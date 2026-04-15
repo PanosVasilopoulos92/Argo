@@ -1,5 +1,6 @@
 package org.viators.argo.certificate.vessel.dto.response;
 
+import org.viators.argo.certificate.enums.CertificateStatusIndicatorEnum;
 import org.viators.argo.certificate.vessel.VesselCertificateT;
 import org.viators.argo.certificate.vessel.enums.VesselCertificateTypeEnum;
 
@@ -31,11 +32,11 @@ public record VesselCertificateSummaryResponse(
         }
 
         if (expiryDate.isBefore(LocalDate.now())) {
-            return "Expired";
+            return CertificateStatusIndicatorEnum.EXPIRED.name();
         } else if (LocalDate.now().plusDays(90).isAfter(expiryDate)) {
-            return "Expiring soon";
+            return CertificateStatusIndicatorEnum.EXPIRING_SOON.name();
         } else {
-            return "Valid";
+            return CertificateStatusIndicatorEnum.VALID.name();
         }
     }
 }

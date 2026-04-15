@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.viators.argo.certificate.dto.request.UpdateCertificateRequest;
 import org.viators.argo.certificate.dto.response.CertificateDetailsResponse;
 import org.viators.argo.certificate.dto.response.CertificateOverviewResponse;
+import org.viators.argo.common.enums.ReportPeriod;
 
 @RestController
 @RequestMapping("/api/v1/certificates")
@@ -23,17 +24,19 @@ public class CertificateController {
     @PatchMapping("/{certificatePublicId}")
     public ResponseEntity<CertificateDetailsResponse> update(
         @PathVariable String certificatePublicId,
-        @Valid @ModelAttribute UpdateCertificateRequest request
+        @Valid @RequestBody UpdateCertificateRequest request
     ) {
         CertificateDetailsResponse response = certificateService.updateCertificate(certificatePublicId, request);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping
-    public ResponseEntity<Page<CertificateOverviewResponse>> getAllCertificates(
+    public ResponseEntity<Page<CertificateOverviewResponse>> getCertificatesExpiringAt(
+        @RequestParam ReportPeriod daysUntilExpiry,
         @PageableDefault(sort = "expiryDate") Pageable pageable
     ) {
-        Page<CertificateOverviewResponse> response = certificateService.getCertifications(pageable);
+        int days = daysUntilExpiry.getDays();
+        Page<CertificateOverviewResponse> response = certificateService.getCertifications(days, pageable);
         return ResponseEntity.ok(response);
     }
 }

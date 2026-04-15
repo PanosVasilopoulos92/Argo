@@ -25,7 +25,7 @@ public class VesselCertificateController {
     public ResponseEntity<String> create(@Valid @RequestBody CreateVesselCertificateRequest request) {
         String vesselCertificationPublicId = vesselCertificateService.create(request);
         return ResponseEntity
-            .created(URI.create("/api/v1/vessel-certifications" + vesselCertificationPublicId))
+            .created(URI.create("/api/v1/vessel-certifications/" + vesselCertificationPublicId))
             .body(vesselCertificationPublicId);
     }
 
