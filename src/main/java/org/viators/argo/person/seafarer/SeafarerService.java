@@ -156,7 +156,7 @@ public class SeafarerService {
 
     @Transactional(readOnly = true)
     public SeafarerDetailsResponse getByPublicId(String publicId) {
-        SeafarerT seafarer = seafarerRepository.findByPublicId(publicId)
+        SeafarerT seafarer = seafarerRepository.findByPublicIdWithAssignments(publicId)
             .orElseThrow(() -> new ResourceNotFoundException("Seafarer", "publicId", publicId));
 
         return SeafarerDetailsResponse.from(seafarer);
@@ -202,7 +202,7 @@ public class SeafarerService {
     }
 
     private SeafarerT loadResourceAndCheckVersion(String publicId, Long expectedVersion) {
-        SeafarerT seafarer = seafarerRepository.findByPublicId(publicId)
+        SeafarerT seafarer = seafarerRepository.findByPublicIdWithAssignments(publicId)
             .orElseThrow(() -> new ResourceNotFoundException("Seafarer", "publicId", publicId));
 
         if (!Objects.equals(seafarer.getVersion(), expectedVersion)) {
