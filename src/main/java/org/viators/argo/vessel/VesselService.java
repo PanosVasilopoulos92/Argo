@@ -13,6 +13,8 @@ import org.viators.argo.assignment.AssignmentQueryService;
 import org.viators.argo.assignment.AssignmentService;
 import org.viators.argo.assignment.AssignmentT;
 import org.viators.argo.assignment.dto.response.CrewRosterResponse;
+import org.viators.argo.certificate.CertificateService;
+import org.viators.argo.certificate.vessel.VesselCertificateService;
 import org.viators.argo.common.enums.ResourceStatusEnum;
 import org.viators.argo.common.exceptions.BusinessValidationException;
 import org.viators.argo.common.exceptions.DuplicateResourceException;
@@ -24,6 +26,8 @@ import org.viators.argo.vessel.dto.request.VesselFilterRequest;
 import org.viators.argo.vessel.dto.response.VesselDetailsResponse;
 import org.viators.argo.vessel.dto.response.VesselSummaryResponse;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -34,6 +38,7 @@ public class VesselService {
 
     private final VesselRepository vesselRepository;
     private final AssignmentQueryService assignmentQueryService;
+    private final VesselCertificateService vesselCertificateService;
 
     @Transactional
     public String create(CreateVesselRequest request) {
@@ -57,9 +62,9 @@ public class VesselService {
         }
 
         operationIsValid(request.vesselName(), request.mmsiNumber(), request.callSign(), null);
-
         request.update(vessel); // Dirty checking update
-        return VesselDetailsResponse.from(vessel);
+
+        return buildVesselDetailsResponse(vessel);
     }
 
     @Transactional
@@ -100,7 +105,7 @@ public class VesselService {
         VesselT vessel = vesselRepository.findByImoNumber(imoNumber)
             .orElseThrow(() -> new ResourceNotFoundException("Vessel", "imoNumber", imoNumber));
 
-        return VesselDetailsResponse.from(vessel);
+        return buildVesselDetailsResponse(vessel);
     }
 
     @Transactional(readOnly = true)
@@ -109,7 +114,7 @@ public class VesselService {
         VesselT vessel = vesselRepository.findByPublicId(publicId)
             .orElseThrow(() -> new ResourceNotFoundException("Vessel", "publicId", publicId));
 
-        return VesselDetailsResponse.from(vessel);
+        return buildVesselDetailsResponse(vessel);
     }
 
     @Transactional(readOnly = true)
@@ -138,12 +143,6 @@ public class VesselService {
             .map(VesselSummaryResponse::from);
     }
 
-    @Transactional(readOnly = true)
-    public VesselT getResourceByPublicId(String publicId) {
-        return vesselRepository.findByPublicId(publicId)
-            .orElseThrow(() -> new ResourceNotFoundException("Vessel", "publicId", publicId));
-    }
-
     // Helper private methods
     private void operationIsValid(String vesselName, String mmsiNumber, String callSign, String imoNumber) {
 
@@ -162,6 +161,19 @@ public class VesselService {
         if (StringUtils.hasText(imoNumber) && vesselRepository.existsByImoNumber(imoNumber)) {
             throw new DuplicateResourceException("Vessel", "imoNumber", imoNumber);
         }
+    }
+
+    private VesselDetailsResponse buildVesselDetailsResponse(VesselT vessel) {
+        Map<String, Integer> certStats = new HashMap<>();
+        int activeAssignments = assignmentQueryService.getCurrentCrewRosterForVessel(vessel.getPublicId()).size();
+        int validCertificatesCount = vesselCertificateService.getValidCertificatesForVesselCount(vessel.getPublicId());
+        int expiringSoonCertificatesCount = vesselCertificateService.getExpiringSoonCertificatesCount(vessel.getPublicId());
+        int expiredCertificatesCount = vesselCertificateService.getExpiredCertificatesCount(vessel.getPublicId());
+        certStats.put("validCertificatesCount", validCertificatesCount);
+        certStats.put("expiringSoonCertificatesCount", expiringSoonCertificatesCount);
+        certStats.put("expiredCertificatesCount", expiredCertificatesCount);
+
+        return VesselDetailsResponse.from(vessel, activeAssignments, certStats);
     }
 
 }
