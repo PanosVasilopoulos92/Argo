@@ -3,11 +3,13 @@ package org.viators.argo.vessel;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.viators.argo.assignment.AssignmentT;
 import org.viators.argo.certificate.vessel.VesselCertificateT;
 import org.viators.argo.common.entity.BaseEntity;
 import org.viators.argo.vessel.enums.ClassificationSocietyEnum;
 import org.viators.argo.vessel.enums.VesselTypeEnum;
 
+import java.util.HashSet;
 import java.util.Set;
 
 @Entity
@@ -62,7 +64,10 @@ public class VesselT extends BaseEntity {
     private String portOfRegistry;
 
     @OneToMany(mappedBy = "vessel", fetch = FetchType.LAZY)
-    private Set<VesselCertificateT> certificates;
+    private Set<VesselCertificateT> certificates = new HashSet<>();
+
+    @OneToMany(mappedBy = "vessel", fetch = FetchType.LAZY)
+    private Set<AssignmentT> assignments = new HashSet<>();
 
     // Helper methods
     public void addCertificate(VesselCertificateT certificate) {

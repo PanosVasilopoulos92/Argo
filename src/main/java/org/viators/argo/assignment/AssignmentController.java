@@ -27,11 +27,13 @@ public class AssignmentController {
 
     @PreAuthorize("hasRole('FOM')")
     @PostMapping
-    public ResponseEntity<String> create(@Valid @RequestBody CreateAssignmentRequest request) {
-        String createdAssignmentPublicId = assignmentService.create(request);
+    public ResponseEntity<AssignmentDetailsResponse> create(@Valid @RequestBody CreateAssignmentRequest request) {
+
+        AssignmentDetailsResponse createdAssignment = assignmentService.create(request);
+
         return ResponseEntity
-            .created(URI.create("/api/v1/assignments/" + createdAssignmentPublicId))
-            .body(createdAssignmentPublicId);
+            .created(URI.create("/api/v1/assignments/" + createdAssignment.assignmentPublicId()))
+            .body(createdAssignment);
     }
 
     @PreAuthorize("hasRole('FOM')")
