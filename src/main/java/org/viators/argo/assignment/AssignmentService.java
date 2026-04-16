@@ -12,6 +12,7 @@ import org.viators.argo.assignment.dto.response.AssignmentDetailsResponse;
 import org.viators.argo.assignment.dto.response.AssignmentsHistOfVesselResponse;
 import org.viators.argo.assignment.dto.response.AssignmentsHistOfSeafarerResponse;
 import org.viators.argo.assignment.dto.response.CrewRosterResponse;
+import org.viators.argo.certificate.person.PersonCertificateT;
 import org.viators.argo.common.enums.ResourceStatusEnum;
 import org.viators.argo.common.exceptions.BusinessValidationException;
 import org.viators.argo.common.exceptions.InvalidStateException;
@@ -21,6 +22,8 @@ import org.viators.argo.person.seafarer.SeafarerT;
 import org.viators.argo.vessel.VesselService;
 import org.viators.argo.vessel.VesselT;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -34,7 +37,7 @@ public class AssignmentService {
     private final VesselService vesselService;
 
     @Transactional
-    public String create(CreateAssignmentRequest request) {
+    public AssignmentDetailsResponse create(CreateAssignmentRequest request) {
         SeafarerT seafarer = seafarerService.getResourceByPublicId(request.seafarerPublicId());
         VesselT vessel = vesselService.getResourceByPublicId(request.vesselPublicId());
 
@@ -47,7 +50,7 @@ public class AssignmentService {
         assignment.setVessel(vessel);
 
         assignment = assignmentRepository.save(assignment);
-        return assignment.getPublicId();
+        return AssignmentDetailsResponse.from(assignment, seafarer.getCertificates());
     }
 
     @Transactional
@@ -67,7 +70,7 @@ public class AssignmentService {
         request.signOffSeafarer(assignment);
         assignment.setAssignmentState(AssignmentStateEnum.COMPLETED);
 
-        return AssignmentDetailsResponse.from(assignment);
+        return AssignmentDetailsResponse.from(assignment, Set.of());
     }
 
     @Transactional

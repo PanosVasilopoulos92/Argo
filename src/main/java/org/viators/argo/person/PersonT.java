@@ -3,11 +3,13 @@ package org.viators.argo.person;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.viators.argo.assignment.AssignmentT;
 import org.viators.argo.certificate.person.PersonCertificateT;
 import org.viators.argo.common.entity.BaseEntity;
 import org.viators.argo.common.enums.GenderEnum;
 
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.Set;
 
 @Entity
@@ -64,7 +66,7 @@ public abstract class PersonT extends BaseEntity {
     private String bankAccount;
 
     @OneToMany(mappedBy = "person", fetch = FetchType.LAZY)
-    private Set<PersonCertificateT> certificates;
+    private Set<PersonCertificateT> certificates = new HashSet<>();
 
     // Helper methods
     public void addCertificate(PersonCertificateT certificate) {

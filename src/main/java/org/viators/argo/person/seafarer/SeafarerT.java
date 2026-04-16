@@ -3,10 +3,13 @@ package org.viators.argo.person.seafarer;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.viators.argo.assignment.AssignmentT;
 import org.viators.argo.person.PersonT;
 import org.viators.argo.person.seafarer.enums.SeafarerRankEnum;
 
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "seafarers")
@@ -31,4 +34,7 @@ public class SeafarerT extends PersonT {
 
     @Column(name = "sb_expiry", nullable = false)
     private LocalDate sbExpiryDate;
+
+    @OneToMany(mappedBy = "seafarer", fetch = FetchType.LAZY)
+    private Set<AssignmentT> assignments = new HashSet<>();
 }
