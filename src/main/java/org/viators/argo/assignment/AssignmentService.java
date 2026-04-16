@@ -19,6 +19,7 @@ import org.viators.argo.common.exceptions.InvalidStateException;
 import org.viators.argo.common.exceptions.ResourceNotFoundException;
 import org.viators.argo.person.seafarer.SeafarerService;
 import org.viators.argo.person.seafarer.SeafarerT;
+import org.viators.argo.vessel.VesselQueryService;
 import org.viators.argo.vessel.VesselService;
 import org.viators.argo.vessel.VesselT;
 
@@ -34,12 +35,12 @@ public class AssignmentService {
 
     private final AssignmentRepository assignmentRepository;
     private final SeafarerService seafarerService;
-    private final VesselService vesselService;
+    private final VesselQueryService vesselQueryService;
 
     @Transactional
     public AssignmentDetailsResponse create(CreateAssignmentRequest request) {
         SeafarerT seafarer = seafarerService.getResourceByPublicId(request.seafarerPublicId());
-        VesselT vessel = vesselService.getResourceByPublicId(request.vesselPublicId());
+        VesselT vessel = vesselQueryService.getResourceByPublicId(request.vesselPublicId());
 
         validateAssignment(
             seafarer.getPublicId(), seafarer.getStatus(), vessel.getPublicId(), vessel.getStatus()

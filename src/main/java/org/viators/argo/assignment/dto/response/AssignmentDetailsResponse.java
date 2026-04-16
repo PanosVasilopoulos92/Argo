@@ -3,6 +3,7 @@ package org.viators.argo.assignment.dto.response;
 import org.viators.argo.assignment.AssignmentStateEnum;
 import org.viators.argo.assignment.AssignmentT;
 import org.viators.argo.certificate.person.PersonCertificateT;
+import org.viators.argo.certificate.person.dto.response.PersonCertificateSummaryResponse;
 import org.viators.argo.person.seafarer.enums.SeafarerRankEnum;
 
 import java.time.LocalDate;
@@ -24,8 +25,8 @@ public record AssignmentDetailsResponse(
     String remarks,
     String signOffRemarks,
     AssignmentStateEnum assignmentState,
-    Set<PersonCertificateT> seafarerExpiredCertificates,
-    Set<PersonCertificateT> seafarerNearExpirationCertificates
+    Set<PersonCertificateSummaryResponse> seafarerExpiredCertificates,
+    Set<PersonCertificateSummaryResponse> seafarerNearExpirationCertificates
 ) {
 
     public static AssignmentDetailsResponse from(AssignmentT entity, Set<PersonCertificateT> certificates) {
@@ -49,15 +50,23 @@ public record AssignmentDetailsResponse(
         );
     }
 
-    private static Set<PersonCertificateT> expiredCertificates(Set<PersonCertificateT> certificates) {
+    private static Set<PersonCertificateSummaryResponse> expiredCertificates(Set<PersonCertificateT> certificates) {
+        LocalDate today = LocalDate.now();
+
         return certificates.stream()
-            .filter(c -> c.getExpiryDate().isBefore(LocalDate.now()))
+            .filter(c -> c.getExpiryDate() != null && c.getExpiryDate().isBefore(today))
+            .map(PersonCertificateSummaryResponse::from)
             .collect(Collectors.toSet());
     }
 
-    private static Set<PersonCertificateT> nearExpirationCertificates(Set<PersonCertificateT> certificates) {
+    private static Set<PersonCertificateSummaryResponse> nearExpirationCertificates(Set<PersonCertificateT> certificates) {
+        LocalDate today = LocalDate.now();
+
         return certificates.stream()
-            .filter(c -> c.getExpiryDate().isBefore(LocalDate.now().plusDays(90)))
+            .filter(c -> c.getExpiryDate() != null &&
+                    !c.getExpiryDate().isBefore(today) &&
+                    c.getExpiryDate().isBefore(today.plusDays(90)))
+            .map(PersonCertificateSummaryResponse::from)
             .collect(Collectors.toSet());
     }
 }
