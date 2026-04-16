@@ -10,14 +10,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public record SeafarerDetailsResponse(
-    // BaseEntity fields
     String publicId,
     ResourceStatusEnum status,
     Instant createdAt,
     Instant updatedAt,
     Long version,
-
-    // PersonT fields
     String firstName,
     String lastName,
     String fatherName,
@@ -32,8 +29,6 @@ public record SeafarerDetailsResponse(
     String remarks,
     String bankName,
     String bankAccount,
-
-    // SeafarerT fields
     SeafarerRankEnum rank,
     String seamanBookNumber,
     LocalDate sbIssuedAt,
