@@ -1,7 +1,6 @@
 package org.viators.argo.vessel.dto.response;
 
-import org.viators.argo.assignment.AssignmentStateEnum;
-import org.viators.argo.assignment.AssignmentT;
+import lombok.Builder;
 import org.viators.argo.certificate.enums.CertificateStatusIndicatorEnum;
 import org.viators.argo.certificate.vessel.VesselCertificateT;
 import org.viators.argo.common.enums.ResourceStatusEnum;
@@ -12,12 +11,11 @@ import org.viators.argo.vessel.enums.VesselTypeEnum;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+@Builder
 public record VesselDetailsResponse(
     String publicId,
     String vesselName,
@@ -30,7 +28,7 @@ public record VesselDetailsResponse(
     Double netTonnage,
     Double deadWeightTonnage,
     Integer yearBuild,
-    String builder,
+    String vesselBuilder,
     ClassificationSocietyEnum classificationSociety,
     String portOfRegistry,
     ResourceStatusEnum status,
@@ -38,65 +36,35 @@ public record VesselDetailsResponse(
     Instant updatedAt,
     Long version,
     Integer activeAssignments,
-    Map<String, Long> certificationsStatusIndicators
+    Integer validCertificatesCount,
+    Integer expiringSoonCertificatesCount,
+    Integer expiredCertificatesCount
 ) {
 
-    public static VesselDetailsResponse from(VesselT entity) {
-        return new VesselDetailsResponse(
-            entity.getPublicId(),
-            entity.getVesselName(),
-            entity.getImoNumber(),
-            entity.getMmsiNumber(),
-            entity.getCallSign(),
-            entity.getFlagState(),
-            entity.getVesselType(),
-            entity.getGrossTonnage(),
-            entity.getNetTonnage(),
-            entity.getDeadWeightTonnage(),
-            entity.getYearBuild(),
-            entity.getBuilder(),
-            entity.getClassificationSociety(),
-            entity.getPortOfRegistry(),
-            entity.getStatus(),
-            entity.getCreatedAt(),
-            entity.getUpdatedAt(),
-            entity.getVersion(),
-            filterActiveAssignments(entity.getAssignments()),
-            defineCertificationValidation(entity.getCertificates())
-        );
-    }
-
-    private static Map<String, Long> defineCertificationValidation(Set<VesselCertificateT> certificates) {
-
-        LocalDate today = LocalDate.now();
-        Map<String, Long> result  = certificates.stream()
-            .collect(Collectors.groupingBy(
-                c -> classifyCertificate(c, today),
-                Collectors.counting()
-            ));
-
-        Arrays.stream(CertificateStatusIndicatorEnum.values())
-            .forEach(s -> result.putIfAbsent(s.name(), 0L));
-
-        return result;
-    }
-
-    private static String classifyCertificate(VesselCertificateT c, LocalDate today) {
-
-        if (c.getExpiryDate().isBefore(today)) {
-            return CertificateStatusIndicatorEnum.EXPIRED.name();
-        } else if (c.getExpiryDate().isBefore(today.plusDays(90))) {
-            return CertificateStatusIndicatorEnum.EXPIRING_SOON.name();
-        } else {
-            return CertificateStatusIndicatorEnum.VALID.name();
-        }
-    }
-
-    private static int filterActiveAssignments(Set<AssignmentT> assignments) {
-
-        return assignments.stream()
-            .filter(a -> AssignmentStateEnum.ACTIVE.equals(a.getAssignmentState()))
-            .collect(Collectors.toSet())
-            .size();
+    public static VesselDetailsResponse from(VesselT entity, int activeAssignments, Map<String, Integer> certStats) {
+        return VesselDetailsResponse.builder()
+            .publicId(entity.getPublicId())
+            .vesselName(entity.getVesselName())
+            .imoNumber(entity.getImoNumber())
+            .mmsiNumber(entity.getMmsiNumber())
+            .callSign(entity.getCallSign())
+            .flagState(entity.getFlagState())
+            .vesselType(entity.getVesselType())
+            .grossTonnage(entity.getGrossTonnage())
+            .netTonnage(entity.getNetTonnage())
+            .deadWeightTonnage(entity.getDeadWeightTonnage())
+            .yearBuild(entity.getYearBuild())
+            .vesselBuilder(entity.getBuilder())
+            .classificationSociety(entity.getClassificationSociety())
+            .portOfRegistry(entity.getPortOfRegistry())
+            .status(entity.getStatus())
+            .createdAt(entity.getCreatedAt())
+            .updatedAt(entity.getUpdatedAt())
+            .version(entity.getVersion())
+            .activeAssignments(activeAssignments)
+            .validCertificatesCount(certStats.get("validCertificatesCount"))
+            .expiringSoonCertificatesCount(certStats.get("expiringSoonCertificatesCount"))
+            .expiredCertificatesCount(certStats.get("expiredCertificatesCount"))
+            .build();
     }
 }

@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.viators.argo.assignment.dto.projection.ActiveAssignmentInfo;
 import org.viators.argo.assignment.dto.response.AssignmentsHistOfVesselResponse;
 import org.viators.argo.assignment.dto.response.AssignmentsHistOfSeafarerResponse;
 
@@ -29,6 +30,21 @@ public interface AssignmentRepository extends JpaRepository<AssignmentT, Long> {
         String vesselPublicId, AssignmentStateEnum status);
 
     Optional<AssignmentT> findBySeafarer_PublicIdAndActualSignedOffDateIsNull(String seafarerPublicId);
+
+    @Query("""
+           select new org.viators.argo.assignment.dto.projection.ActiveAssignmentInfo(
+               v.vesselName,
+               a.assignmentRank
+           )
+           from AssignmentT a
+           join a.vessel v
+           where a.seafarer.publicId = :seafarerPublicId
+             and a.assignmentState = org.viators.argo.assignment.AssignmentStateEnum.ACTIVE
+             and a.actualSignedOffDate is null
+           """)
+    Optional<ActiveAssignmentInfo> findActiveAssignmentInfoForSeafarer(
+        @Param("seafarerPublicId") String seafarerPublicId
+    );
 
     @Query("""
         SELECT NEW org.viators.argo.assignment.dto.response.AssignmentsHistOfSeafarerResponse(

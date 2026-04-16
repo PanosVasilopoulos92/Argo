@@ -10,12 +10,15 @@ import org.viators.argo.certificate.CertificateRepository;
 import org.viators.argo.certificate.CertificateT;
 import org.viators.argo.certificate.person.dto.request.CreatePersonCertificateRequest;
 import org.viators.argo.certificate.person.dto.response.PersonCertificateSummaryResponse;
+import org.viators.argo.common.enums.ReportPeriod;
 import org.viators.argo.common.exceptions.BusinessValidationException;
 import org.viators.argo.common.exceptions.DuplicateResourceException;
 import org.viators.argo.common.exceptions.ResourceNotFoundException;
 import org.viators.argo.person.PersonRepository;
 import org.viators.argo.person.PersonT;
 import org.viators.argo.person.seafarer.SeafarerT;
+
+import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor
@@ -51,5 +54,27 @@ public class PersonCertificateService {
     public Page<PersonCertificateSummaryResponse> getCertificatesForPerson(String personPublicId, Pageable pageable) {
         return personCertificateRepository.findByPerson_PublicId(personPublicId, pageable)
             .map(PersonCertificateSummaryResponse::from);
+    }
+
+    @Transactional(readOnly = true)
+    public long getValidCertificatesCountForPerson(String personPublicId) {
+        LocalDate today = LocalDate.now();
+        return personCertificateRepository.countValidByPersonPublicId(
+            personPublicId, today.plusDays(ReportPeriod.NINETY.getDays())
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public long getExpiringSoonCertificatesCountForPerson(String personPublicId) {
+        LocalDate today = LocalDate.now();
+        return personCertificateRepository.countExpiringSoonByPersonPublicId(
+            personPublicId, today, today.plusDays(ReportPeriod.NINETY.getDays())
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public long getExpiredCertificatesCountForPerson(String personPublicId) {
+        LocalDate today = LocalDate.now();
+        return personCertificateRepository.countExpiredByPersonPublicId(personPublicId, today);
     }
 }

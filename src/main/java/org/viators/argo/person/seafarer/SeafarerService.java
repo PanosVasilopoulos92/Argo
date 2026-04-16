@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.viators.argo.assignment.AssignmentQueryService;
+import org.viators.argo.assignment.dto.projection.ActiveAssignmentInfo;
+import org.viators.argo.certificate.person.PersonCertificateService;
 import org.viators.argo.common.enums.ResourceStatusEnum;
 import org.viators.argo.common.exceptions.BusinessValidationException;
 import org.viators.argo.common.exceptions.DuplicateResourceException;
@@ -39,6 +41,7 @@ public class SeafarerService {
     private final PersonRepository personRepository;
     private final SeafarerRepository seafarerRepository;
     private final AssignmentQueryService assignmentQueryService;
+    private final PersonCertificateService personCertificateService;
 
     @Transactional
     public String create(CreateSeafarerRequest request) {
@@ -76,7 +79,7 @@ public class SeafarerService {
         }
 
         request.update(seafarer);
-        return SeafarerDetailsResponse.from(seafarerRepository.save(seafarer));
+        return buildResponse(seafarerRepository.save(seafarer));
     }
 
     @Transactional
@@ -93,7 +96,7 @@ public class SeafarerService {
         }
 
         request.update(seafarer);
-        return SeafarerDetailsResponse.from(seafarerRepository.save(seafarer));
+        return buildResponse(seafarerRepository.save(seafarer));
     }
 
     @Transactional
@@ -151,15 +154,15 @@ public class SeafarerService {
         SeafarerT seafarer = seafarerRepository.findByPassportNumber(passportNumber)
             .orElseThrow(() -> new ResourceNotFoundException("Seafarer", "passportNumber", passportNumber));
 
-        return SeafarerDetailsResponse.from(seafarer);
+        return buildResponse(seafarer);
     }
 
     @Transactional(readOnly = true)
     public SeafarerDetailsResponse getByPublicId(String publicId) {
-        SeafarerT seafarer = seafarerRepository.findByPublicIdWithAssignments(publicId)
+        SeafarerT seafarer = seafarerRepository.findByPublicId(publicId)
             .orElseThrow(() -> new ResourceNotFoundException("Seafarer", "publicId", publicId));
 
-        return SeafarerDetailsResponse.from(seafarer);
+        return buildResponse(seafarer);
     }
 
     @Transactional(readOnly = true)
@@ -198,11 +201,11 @@ public class SeafarerService {
         SeafarerT seafarer = loadResourceAndCheckVersion(publicId, expectedVersion);
 
         updater.accept(seafarer);
-        return SeafarerDetailsResponse.from(seafarerRepository.save(seafarer));
+        return buildResponse(seafarerRepository.save(seafarer));
     }
 
     private SeafarerT loadResourceAndCheckVersion(String publicId, Long expectedVersion) {
-        SeafarerT seafarer = seafarerRepository.findByPublicIdWithAssignments(publicId)
+        SeafarerT seafarer = seafarerRepository.findByPublicId(publicId)
             .orElseThrow(() -> new ResourceNotFoundException("Seafarer", "publicId", publicId));
 
         if (!Objects.equals(seafarer.getVersion(), expectedVersion)) {
@@ -210,6 +213,20 @@ public class SeafarerService {
         }
 
         return seafarer;
+    }
+
+    private SeafarerDetailsResponse buildResponse(SeafarerT seafarer) {
+        String publicId = seafarer.getPublicId();
+        ActiveAssignmentInfo activeAssignment =
+            assignmentQueryService.getActiveAssignmentInfoForSeafarer(publicId).orElse(null);
+
+        return SeafarerDetailsResponse.from(
+            seafarer,
+            activeAssignment,
+            personCertificateService.getValidCertificatesCountForPerson(publicId),
+            personCertificateService.getExpiringSoonCertificatesCountForPerson(publicId),
+            personCertificateService.getExpiredCertificatesCountForPerson(publicId)
+        );
     }
 
 }
