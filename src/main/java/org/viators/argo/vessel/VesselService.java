@@ -164,16 +164,13 @@ public class VesselService {
     }
 
     private VesselDetailsResponse buildVesselDetailsResponse(VesselT vessel) {
-        Map<String, Integer> certStats = new HashMap<>();
-        int activeAssignments = assignmentQueryService.getCurrentCrewRosterForVessel(vessel.getPublicId()).size();
-        int validCertificatesCount = vesselCertificateService.getValidCertificatesForVesselCount(vessel.getPublicId());
-        int expiringSoonCertificatesCount = vesselCertificateService.getExpiringSoonCertificatesCount(vessel.getPublicId());
-        int expiredCertificatesCount = vesselCertificateService.getExpiredCertificatesCount(vessel.getPublicId());
-        certStats.put("validCertificatesCount", validCertificatesCount);
-        certStats.put("expiringSoonCertificatesCount", expiringSoonCertificatesCount);
-        certStats.put("expiredCertificatesCount", expiredCertificatesCount);
+        long activeAssignments = assignmentQueryService.getActiveAssignmentsForVesselCount(vessel.getPublicId());
+        long validCertificatesCount = vesselCertificateService.getValidCertificatesForVesselCount(vessel.getPublicId());
+        long expiringSoonCertificatesCount = vesselCertificateService.getExpiringSoonCertificatesCount(vessel.getPublicId());
+        long expiredCertificatesCount = vesselCertificateService.getExpiredCertificatesCount(vessel.getPublicId());
 
-        return VesselDetailsResponse.from(vessel, activeAssignments, certStats);
+        return VesselDetailsResponse.from(vessel, activeAssignments, validCertificatesCount,
+            expiringSoonCertificatesCount, expiredCertificatesCount);
     }
 
 }

@@ -30,4 +30,9 @@ public class AssignmentQueryService {
     public Optional<ActiveAssignmentInfo> getActiveAssignmentInfoForSeafarer(String seafarerPublicId) {
         return assignmentRepository.findActiveAssignmentInfoForSeafarer(seafarerPublicId);
     }
+
+    public long getActiveAssignmentsForVesselCount(String vesselPublicId) {
+        return assignmentRepository.getActiveAssignmentsForVesselCount(vesselPublicId);
+    }
+
 }
