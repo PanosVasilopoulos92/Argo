@@ -90,4 +90,11 @@ public interface AssignmentRepository extends JpaRepository<AssignmentT, Long> {
         @Param("vesselPublicId") String vesselPublicId,
         Pageable pageable
     );
+
+    @Query("""
+        select count(a) from AssignmentT a
+        where a.vessel.publicId = :vesselPublicId
+        and a.assignmentState = org.viators.argo.assignment.AssignmentStateEnum.ACTIVE
+        """)
+    long getActiveAssignmentsForVesselCount(@Param("vesselPublicId") String vesselPublicId);
 }

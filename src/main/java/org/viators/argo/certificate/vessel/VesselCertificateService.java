@@ -13,12 +13,9 @@ import org.viators.argo.common.enums.ReportPeriod;
 import org.viators.argo.common.exceptions.BusinessValidationException;
 import org.viators.argo.common.exceptions.DuplicateResourceException;
 import org.viators.argo.vessel.VesselQueryService;
-import org.viators.argo.vessel.VesselService;
 import org.viators.argo.vessel.VesselT;
 
 import java.time.LocalDate;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -55,27 +52,24 @@ public class VesselCertificateService {
     }
 
     @Transactional(readOnly = true)
-    public int getValidCertificatesForVesselCount(String vesselPublicId) {
+    public long getValidCertificatesForVesselCount(String vesselPublicId) {
         LocalDate today = LocalDate.now();
-        return vesselCertificateRepository
-            .getFindByVessel_PublicIdAndExpiryDateIsNullOrExpiryDateAfter(vesselPublicId, today).stream()
-            .filter(c -> c.getExpiryDate().isAfter(today.plusDays(ReportPeriod.NINETY.getDays())))
-            .collect(Collectors.toSet())
-            .size();
+        return vesselCertificateRepository.getValidVesselCertificates(vesselPublicId,
+            today.plusDays(ReportPeriod.NINETY.getDays()));
     }
 
     @Transactional(readOnly = true)
-    public int getExpiringSoonCertificatesCount(String vesselPublicId) {
+    public long getExpiringSoonCertificatesCount(String vesselPublicId) {
         LocalDate today = LocalDate.now();
-        return vesselCertificateRepository.findByVessel_PublicIdAndExpiryDateBetween(
+        return vesselCertificateRepository.getVesselCertificatesThatExpireSoon(
             vesselPublicId, today, today.plusDays(ReportPeriod.NINETY.getDays())
         );
     }
 
     @Transactional(readOnly = true)
-    public int getExpiredCertificatesCount(String vesselPublicId) {
+    public long getExpiredCertificatesCount(String vesselPublicId) {
         LocalDate today = LocalDate.now();
-        return vesselCertificateRepository.findByVessel_PublicIdAndExpiryDateBefore(vesselPublicId, today);
+        return vesselCertificateRepository.getExpiredVesselCertificates(vesselPublicId, today);
     }
 
 }

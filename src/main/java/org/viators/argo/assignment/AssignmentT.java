@@ -23,14 +23,6 @@ import java.time.LocalDate;
 @SuperBuilder
 public class AssignmentT extends BaseEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "vessel_id", nullable = false)
-    private VesselT vessel;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "seafarer_id", nullable = false)
-    private SeafarerT seafarer;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "assignment_rank", nullable = false)
     private SeafarerRankEnum assignmentRank;
@@ -60,4 +52,12 @@ public class AssignmentT extends BaseEntity {
     @Column(name = "assignment_state", nullable = false)
     @Builder.Default
     private AssignmentStateEnum assignmentState = AssignmentStateEnum.ACTIVE;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "vessel_id", nullable = false)
+    private VesselT vessel;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "seafarer_id", nullable = false)
+    private SeafarerT seafarer;
 }

@@ -3,6 +3,8 @@ package org.viators.argo.certificate.vessel;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.viators.argo.vessel.VesselT;
 
@@ -14,9 +16,29 @@ public interface VesselCertificateRepository extends JpaRepository<VesselCertifi
 
     Page<VesselCertificateT> findByVessel_PublicId(String vesselPublicId, Pageable pageable);
 
-    Set<VesselCertificateT> getFindByVessel_PublicIdAndExpiryDateIsNullOrExpiryDateAfter(String vesselPublicId, LocalDate expiryDateBefore);
+    @Query("""
+           select count(vc) from VesselCertificateT vc
+           where vc.vessel.publicId = :vesselPublicId
+           and (vc.expiryDate is null or vc.expiryDate > :horizon)
+           """)
+    long getValidVesselCertificates(@Param("vesselPublicId") String vesselPublicId,
+                                   @Param("horizon") LocalDate horizon);
 
-    Integer findByVessel_PublicIdAndExpiryDateBetween(String vesselPublicId, LocalDate expiryDateAfter, LocalDate expiryDateBefore);
+    @Query("""
+           select count(vc) from VesselCertificateT vc
+           where vc.vessel.publicId = :vesselPublicId
+           and vc.expiryDate > :today
+           and vc.expiryDate <= :horizon
+           """)
+    long getVesselCertificatesThatExpireSoon(@Param("vesselPublicId") String vesselPublicId,
+                                             @Param("today") LocalDate today,
+                                             @Param("horizon") LocalDate horizon);
 
-    Integer findByVessel_PublicIdAndExpiryDateBefore(String vesselPublicId, LocalDate expiryDateBefore);
+    @Query("""
+           select count(vc) from VesselCertificateT vc
+           where vc.vessel.publicId = :vesselPublicId
+           and vc.expiryDate < :horizon
+           """)
+    long getExpiredVesselCertificates(@Param("vesselPublicId") String vesselPublicId,
+                                      @Param("horizon") LocalDate horizon);
 }

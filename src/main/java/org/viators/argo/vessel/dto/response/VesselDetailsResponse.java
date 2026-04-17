@@ -35,13 +35,19 @@ public record VesselDetailsResponse(
     Instant createdAt,
     Instant updatedAt,
     Long version,
-    Integer activeAssignments,
-    Integer validCertificatesCount,
-    Integer expiringSoonCertificatesCount,
-    Integer expiredCertificatesCount
+    Long activeAssignments,
+    Long validCertificatesCount,
+    Long expiringSoonCertificatesCount,
+    Long expiredCertificatesCount
 ) {
 
-    public static VesselDetailsResponse from(VesselT entity, int activeAssignments, Map<String, Integer> certStats) {
+    public static VesselDetailsResponse from(
+        VesselT entity,
+        long activeAssignments,
+        long validCertificatesCount,
+        long expiringSoonCertificatesCount,
+        long expiredCertificatesCount
+    ) {
         return VesselDetailsResponse.builder()
             .publicId(entity.getPublicId())
             .vesselName(entity.getVesselName())
@@ -62,9 +68,9 @@ public record VesselDetailsResponse(
             .updatedAt(entity.getUpdatedAt())
             .version(entity.getVersion())
             .activeAssignments(activeAssignments)
-            .validCertificatesCount(certStats.get("validCertificatesCount"))
-            .expiringSoonCertificatesCount(certStats.get("expiringSoonCertificatesCount"))
-            .expiredCertificatesCount(certStats.get("expiredCertificatesCount"))
+            .validCertificatesCount(validCertificatesCount)
+            .expiringSoonCertificatesCount(expiringSoonCertificatesCount)
+            .expiredCertificatesCount(expiredCertificatesCount)
             .build();
     }
 }
