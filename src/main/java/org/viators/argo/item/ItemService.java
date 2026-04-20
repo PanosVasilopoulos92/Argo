@@ -2,12 +2,18 @@ package org.viators.argo.item;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.viators.argo.common.sequence.ItemCategorySequenceRepository;
 import org.viators.argo.common.sequence.ItemCategorySequenceT;
 import org.viators.argo.item.dto.request.CreateItemRequest;
+import org.viators.argo.item.dto.request.ItemSearchFilterRequest;
 import org.viators.argo.item.dto.response.ItemDetailsResponse;
+import org.viators.argo.item.dto.response.ItemSummaryResponse;
 import org.viators.argo.item.enums.ItemCategoryEnum;
 import org.viators.argo.item.enums.UnitOfMeasurementEnum;
 
@@ -61,5 +67,38 @@ public class ItemService {
         sequence.setLastVal(nextVal);
 
         return itemCategory.getItemCategoryCode() + "-" + String.format("%05d", nextVal);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ItemSummaryResponse> getItemBasedOnFilters(ItemSearchFilterRequest request, Pageable pageable) {
+        Specification<ItemT> specs = (root, query, cb) -> cb.conjunction();
+
+        if (!request.includeInactiveItems()) {
+            specs = ItemSpecs.isActive();
+        }
+
+        if (StringUtils.hasText(request.nameContaining())) {
+            specs = specs.and(ItemSpecs.hasNameContaining(request.nameContaining()));
+        }
+
+        if (request.itemCategory() != null) {
+            specs = specs.and(ItemSpecs.hasCategory(request.itemCategory()));
+        }
+
+        if (StringUtils.hasText(request.manufacturerContaining())) {
+            specs = specs.and(ItemSpecs.hasManufacturerContaining(request.manufacturerContaining()));
+        }
+
+        if (StringUtils.hasText(request.itemCode())) {
+            specs = specs.and(ItemSpecs.hasItemCode(request.itemCode()));
+        }
+
+        if (StringUtils.hasText(request.partNumber())) {
+            specs = specs.and(ItemSpecs.hasPartNumber(request.partNumber()));
+        }
+
+        return itemRepository.findAll(specs, pageable)
+            .map(ItemSummaryResponse::from);
+
     }
 }

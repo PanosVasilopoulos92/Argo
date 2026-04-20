@@ -1,11 +1,12 @@
 package org.viators.argo.item;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.viators.argo.item.enums.ItemCategoryEnum;
 
-public interface ItemRepository extends JpaRepository<ItemT, Long> {
+public interface ItemRepository extends JpaRepository<ItemT, Long>, JpaSpecificationExecutor<ItemT> {
 
     @Query("""
         select i.itemCode from ItemT i
