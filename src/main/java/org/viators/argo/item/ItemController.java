@@ -11,6 +11,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.viators.argo.item.dto.request.CreateItemRequest;
 import org.viators.argo.item.dto.request.ItemSearchFilterRequest;
+import org.viators.argo.item.dto.request.PatchItemBasicInfoRequest;
+import org.viators.argo.item.dto.request.PatchItemSupplierRequest;
 import org.viators.argo.item.dto.response.ItemDetailsResponse;
 import org.viators.argo.item.dto.response.ItemSummaryResponse;
 import org.viators.argo.item.enums.ItemCategoryEnum;
@@ -26,7 +28,7 @@ public class ItemController {
 
     private final ItemService itemService;
 
-    @PreAuthorize("hasRole('PROCUREMENT')")
+    @PreAuthorize("hasRole('PROCUREMENT_MANAGER')")
     @PostMapping
     public ResponseEntity<ItemDetailsResponse> create(@Valid @RequestBody CreateItemRequest request) {
         ItemDetailsResponse response = itemService.create(request);
@@ -36,14 +38,43 @@ public class ItemController {
             .body(response);
     }
 
-    @GetMapping("/categories")
-    public ResponseEntity<Set<ItemCategoryEnum>> getAvailableItemCategories() {
-        return ResponseEntity.ok(itemService.getAvailableItemCategories());
+    @PreAuthorize("hasRole('PROCUREMENT_MANAGER')")
+    @PatchMapping("/{itemPublicId}/basic-info")
+    public ResponseEntity<ItemDetailsResponse> patchItemBasicInfo(
+        @PathVariable String itemPublicId,
+        @Valid @RequestBody PatchItemBasicInfoRequest request
+    ) {
+        ItemDetailsResponse response = itemService.patchItemBasicInfo(itemPublicId, request);
+        return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/units-of-measurement")
-    public ResponseEntity<Set<UnitOfMeasurementEnum>> getAllUnitsOfMeasurement() {
-        return ResponseEntity.ok(itemService.getAllUnitsOfMeasurement());
+    @PreAuthorize("hasRole('PROCUREMENT_MANAGER')")
+    @PatchMapping("/{itemPublicId}/supplier-info")
+    public ResponseEntity<ItemDetailsResponse> patchItemSupplierInfo(
+        @PathVariable String itemPublicId,
+        @Valid @RequestBody PatchItemSupplierRequest request
+    ) {
+        ItemDetailsResponse response = itemService.patchItemSupplierInfo(itemPublicId, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("hasRole('PROCUREMENT_MANAGER')")
+    @PatchMapping("/{publicId}/deactivate")
+    public ResponseEntity<Void> deactivateItem(@PathVariable String publicId) {
+        itemService.deactivateItem(publicId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize("hasRole('PROCUREMENT_MANAGER')")
+    @PatchMapping("/{publicId}/reactivate")
+    public ResponseEntity<Void> reactivateItem(@PathVariable String publicId) {
+        itemService.reactivateItem(publicId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{publicId}")
+    public ResponseEntity<ItemDetailsResponse> getItem(@PathVariable String publicId) {
+        return ResponseEntity.ok(itemService.getItem(publicId));
     }
 
     @GetMapping("/filter")
@@ -55,4 +86,13 @@ public class ItemController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/categories")
+    public ResponseEntity<Set<ItemCategoryEnum>> getAvailableItemCategories() {
+        return ResponseEntity.ok(itemService.getAvailableItemCategories());
+    }
+
+    @GetMapping("/units-of-measurement")
+    public ResponseEntity<Set<UnitOfMeasurementEnum>> getAllUnitsOfMeasurement() {
+        return ResponseEntity.ok(itemService.getAllUnitsOfMeasurement());
+    }
 }
