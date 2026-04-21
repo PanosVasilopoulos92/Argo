@@ -25,9 +25,9 @@ public final class PatchUtils {
     /**
      * Applies the wrapped value to the given setter if the field was present in the request.
      *
-     * <p>If the {@code JsonNullable} is undefined (field absent from JSON), the setter
+     * If the {@code JsonNullable} is undefined (field absent from JSON), the setter
      * is NOT called and the entity's existing value remains unchanged. If the field is
-     * present — even with a null value — the setter IS called with {@code field.get()}.</p>
+     * present — even with a null value — the setter IS called with {@code field.get()}.
      *
      * @param field  the JsonNullable field from the patch request DTO
      * @param setter the entity setter method reference to apply the value to

@@ -15,7 +15,7 @@ public record ItemDetailsResponse(
     ItemCategoryEnum itemCategory,
     UnitOfMeasurementEnum unitOfMeasurement,
     String partNumber,
-    String supplier,
+    String manufacturer,
     Instant createdAt,
     Long version,
     ResourceStatusEnum status
@@ -30,7 +30,7 @@ public record ItemDetailsResponse(
             entity.getItemCategory(),
             entity.getUnitOfMeasurement(),
             entity.getPartNumber(),
-            entity.getSupplier(),
+            entity.getManufacturer(),
             entity.getCreatedAt(),
             entity.getVersion(),
             entity.getStatus()

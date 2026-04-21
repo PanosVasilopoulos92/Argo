@@ -37,6 +37,6 @@ public class ItemT extends BaseEntity {
     @Column(name = "part_number")
     private String partNumber;
 
-    @Column(name = "supplier")
-    private String supplier;
+    @Column(name = "manufacturer")
+    private String manufacturer;
 }
