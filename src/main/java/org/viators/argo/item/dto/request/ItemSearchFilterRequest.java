@@ -9,8 +9,8 @@ public record ItemSearchFilterRequest(
 
     ItemCategoryEnum itemCategory,
 
-    @Size(max = 100, message = "Supplier filter must be at most 100 characters long")
-    String supplierContaining,
+    @Size(max = 100, message = "Manufacturer filter must be at most 100 characters long")
+    String manufacturerContaining,
 
     @Size(max = 50, message = "Item code must be at most 50 characters long")
     String itemCode,
