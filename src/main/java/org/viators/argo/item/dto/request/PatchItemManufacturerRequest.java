@@ -14,9 +14,9 @@ import static org.viators.argo.common.util.PatchUtils.applyIfPresent;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class PatchItemSupplierRequest {
+public class PatchItemManufacturerRequest {
 
-    private JsonNullable<String> supplier = JsonNullable.undefined();
+    private JsonNullable<String> manufacturer = JsonNullable.undefined();
 
     private JsonNullable<String> partNumber = JsonNullable.undefined();
 
@@ -24,7 +24,7 @@ public class PatchItemSupplierRequest {
     private Long version;
 
     public void update(ItemT entity) {
-        applyIfPresent(supplier, entity::setSupplier);
+        applyIfPresent(manufacturer, entity::setManufacturer);
         applyIfPresent(partNumber, entity::setPartNumber);
     }
 }

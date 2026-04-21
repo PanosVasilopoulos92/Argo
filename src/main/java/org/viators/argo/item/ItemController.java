@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import org.viators.argo.item.dto.request.CreateItemRequest;
 import org.viators.argo.item.dto.request.ItemSearchFilterRequest;
 import org.viators.argo.item.dto.request.PatchItemBasicInfoRequest;
-import org.viators.argo.item.dto.request.PatchItemSupplierRequest;
+import org.viators.argo.item.dto.request.PatchItemManufacturerRequest;
 import org.viators.argo.item.dto.response.ItemDetailsResponse;
 import org.viators.argo.item.dto.response.ItemSummaryResponse;
 import org.viators.argo.item.enums.ItemCategoryEnum;
@@ -49,12 +49,12 @@ public class ItemController {
     }
 
     @PreAuthorize("hasRole('PROCUREMENT_MANAGER')")
-    @PatchMapping("/{itemPublicId}/supplier-info")
-    public ResponseEntity<ItemDetailsResponse> patchItemSupplierInfo(
+    @PatchMapping("/{itemPublicId}/manufacturer-info")
+    public ResponseEntity<ItemDetailsResponse> patchItemManufacturerInfo(
         @PathVariable String itemPublicId,
-        @Valid @RequestBody PatchItemSupplierRequest request
+        @Valid @RequestBody PatchItemManufacturerRequest request
     ) {
-        ItemDetailsResponse response = itemService.patchItemSupplierInfo(itemPublicId, request);
+        ItemDetailsResponse response = itemService.patchItemManufacturerInfo(itemPublicId, request);
         return ResponseEntity.ok(response);
     }
 

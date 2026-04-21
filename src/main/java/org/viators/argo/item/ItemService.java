@@ -1,5 +1,6 @@
 package org.viators.argo.item;
 
+import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -9,12 +10,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.viators.argo.common.enums.ResourceStatusEnum;
+import org.viators.argo.common.exceptions.DuplicateResourceException;
 import org.viators.argo.common.exceptions.InvalidStateException;
 import org.viators.argo.common.exceptions.ResourceNotFoundException;
 import org.viators.argo.item.dto.request.CreateItemRequest;
 import org.viators.argo.item.dto.request.ItemSearchFilterRequest;
 import org.viators.argo.item.dto.request.PatchItemBasicInfoRequest;
-import org.viators.argo.item.dto.request.PatchItemSupplierRequest;
+import org.viators.argo.item.dto.request.PatchItemManufacturerRequest;
 import org.viators.argo.item.dto.response.ItemDetailsResponse;
 import org.viators.argo.item.dto.response.ItemSummaryResponse;
 import org.viators.argo.item.enums.ItemCategoryEnum;
@@ -40,6 +42,11 @@ public class ItemService {
         ItemT item = request.toEntity();
         item.setItemCode(generateItemCode(request.itemCategory()));
 
+        itemRepository.findByPartNumberAndManufacturer(request.partNumber(), request.manufacturer())
+            .ifPresent(i -> {
+                throw new DuplicateResourceException("There is already a partNumber with same manufacturer");
+            });
+
         item = itemRepository.save(item);
         return ItemDetailsResponse.from(item);
     }
@@ -53,9 +60,15 @@ public class ItemService {
     }
 
     @Transactional
-    public ItemDetailsResponse patchItemSupplierInfo(String itemPublicId, PatchItemSupplierRequest request) {
+    public ItemDetailsResponse patchItemManufacturerInfo(String itemPublicId, PatchItemManufacturerRequest request) {
         ItemT item = loadResourceAndCheckVersion(itemPublicId, request.getVersion());
         request.update(item);
+
+        itemRepository.findByPartNumberAndManufacturer(item.getPartNumber(), item.getManufacturer())
+            .filter(existing -> !Objects.equals(existing.getId(), item.getId()))
+            .ifPresent(existing -> {
+                throw new DuplicateResourceException("There is already a partNumber with same manufacturer");
+            });
 
         return ItemDetailsResponse.from(itemRepository.save(item));
     }
@@ -99,10 +112,6 @@ public class ItemService {
     public Page<ItemSummaryResponse> getItemBasedOnFilters(ItemSearchFilterRequest request, Pageable pageable) {
         Specification<ItemT> specs = (root, query, cb) -> cb.conjunction();
 
-        if (!request.includeInactiveItems()) {
-            specs = ItemSpecs.isActive();
-        }
-
         if (StringUtils.hasText(request.nameContaining())) {
             specs = specs.and(ItemSpecs.hasNameContaining(request.nameContaining()));
         }
@@ -111,8 +120,8 @@ public class ItemService {
             specs = specs.and(ItemSpecs.hasCategory(request.itemCategory()));
         }
 
-        if (StringUtils.hasText(request.supplierContaining())) {
-            specs = specs.and(ItemSpecs.hasSupplierContaining(request.supplierContaining()));
+        if (StringUtils.hasText(request.manufacturerContaining())) {
+            specs = specs.and(ItemSpecs.hasManufacturerContaining(request.manufacturerContaining()));
         }
 
         if (StringUtils.hasText(request.itemCode())) {
@@ -123,21 +132,28 @@ public class ItemService {
             specs = specs.and(ItemSpecs.hasPartNumber(request.partNumber()));
         }
 
+        if (!request.includeInactiveItems()) {
+            specs = specs.and(ItemSpecs.isActive());
+        }
+
         return itemRepository.findAll(specs, pageable)
             .map(ItemSummaryResponse::from);
     }
 
+    @Transactional(readOnly = true)
     public Set<ItemCategoryEnum> getAvailableItemCategories() {
         return Arrays.stream(ItemCategoryEnum.values())
             .collect(Collectors.toSet());
     }
 
+    @Transactional(readOnly = true)
     public Set<UnitOfMeasurementEnum> getAllUnitsOfMeasurement() {
         return Arrays.stream(UnitOfMeasurementEnum.values())
             .collect(Collectors.toSet());
     }
 
     // Private helper methods
+
     /**
      * Generates the next item code for the given category.
      * Format: {PREFIX}-{zero-padded 5-digit sequence}
@@ -165,7 +181,7 @@ public class ItemService {
             .orElseThrow(() -> new ResourceNotFoundException("Item", "publicId", resourcePublicId));
 
         if (!Objects.equals(item.getVersion(), resourceVersion)) {
-            throw new InvalidStateException("Another user has already updated resource with public Id: %s. Please try again."
+            throw new OptimisticLockException("Another user has already updated resource with public Id: %s. Please try again."
                 .formatted(resourcePublicId));
         }
 

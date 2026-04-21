@@ -20,7 +20,7 @@ public record ItemSummaryResponse(
             entity.getPublicId(),
             entity.getName(),
             entity.getItemCode(),
-            entity.getSupplier(),
+            entity.getManufacturer(),
             entity.getItemCategory(),
             entity.getUnitOfMeasurement(),
             entity.getStatus()
