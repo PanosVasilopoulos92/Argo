@@ -1,4 +1,4 @@
-package org.viators.argo.common.sequence;
+package org.viators.argo.item.sequence;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

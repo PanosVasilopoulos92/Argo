@@ -27,7 +27,7 @@ public class ItemT extends BaseEntity {
     private String itemCode;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "category", nullable = false)
+    @Column(name = "category", nullable = false, updatable = false)
     private ItemCategoryEnum itemCategory;
 
     @Enumerated(EnumType.STRING)
@@ -37,6 +37,6 @@ public class ItemT extends BaseEntity {
     @Column(name = "part_number")
     private String partNumber;
 
-    @Column(name = "manufacturer")
-    private String manufacturer;
+    @Column(name = "supplier")
+    private String supplier;
 }

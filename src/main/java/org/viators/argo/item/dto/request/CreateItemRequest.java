@@ -24,8 +24,8 @@ public record CreateItemRequest(
     @Size(max = 50, message = "Part number must be at most 50 characters long")
     String partNumber,
 
-    @Size(max = 100, message = "Manufacturer must be at most 100 characters long")
-    String manufacturer
+    @Size(max = 100, message = "Supplier must be at most 100 characters long")
+    String supplier
 ) {
 
     public ItemT toEntity() {
@@ -35,7 +35,7 @@ public record CreateItemRequest(
             .itemCategory(itemCategory)
             .unitOfMeasurement(unitOfMeasurement)
             .partNumber(partNumber)
-            .manufacturer(manufacturer)
+            .supplier(supplier)
             .build();
     }
 }
