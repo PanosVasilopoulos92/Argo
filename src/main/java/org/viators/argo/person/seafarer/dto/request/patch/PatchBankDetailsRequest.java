@@ -20,7 +20,7 @@ public class PatchBankDetailsRequest {
     @Size(max = 20, message = "Bank account must be at most 20 characters long")
     private JsonNullable<String> bankAccount = JsonNullable.undefined();
 
-    @NotNull(message = "Version field is required for updates")
+    @NotNull(message = "Version field is required for resource updates")
     private Long version;
 
     public void update(SeafarerT entity) {

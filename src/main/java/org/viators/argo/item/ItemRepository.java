@@ -6,7 +6,11 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.viators.argo.item.enums.ItemCategoryEnum;
 
+import java.util.Optional;
+
 public interface ItemRepository extends JpaRepository<ItemT, Long>, JpaSpecificationExecutor<ItemT> {
+
+    Optional<ItemT> findByPublicId(String publicId);
 
     @Query("""
         select i.itemCode from ItemT i
