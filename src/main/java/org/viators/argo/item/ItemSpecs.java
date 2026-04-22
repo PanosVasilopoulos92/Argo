@@ -25,7 +25,7 @@ public class ItemSpecs {
 
     public static Specification<ItemT> hasManufacturerContaining(String manufacturerText) {
         return (root, query, cb) ->
-            cb.like(cb.lower(root.get("supplier")), "%" + manufacturerText.toLowerCase() + "%");
+            cb.like(cb.lower(root.get("manufacturer")), "%" + manufacturerText.toLowerCase() + "%");
     }
 
     public static Specification<ItemT> hasItemCode(String itemCode) {

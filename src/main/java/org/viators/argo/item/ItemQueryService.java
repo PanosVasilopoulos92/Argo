@@ -1,0 +1,19 @@
+package org.viators.argo.item;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.viators.argo.common.exceptions.ResourceNotFoundException;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class ItemQueryService {
+
+    private final ItemRepository itemRepository;
+
+    public ItemT getResourcePublicId(String resourcePublicId) {
+        return itemRepository.findByPublicId(resourcePublicId)
+            .orElseThrow(() -> new ResourceNotFoundException("Item", "publicId", resourcePublicId));
+    }
+}
