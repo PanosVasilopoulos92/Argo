@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.viators.argo.common.enums.ResourceStatusEnum;
+import org.viators.argo.common.exceptions.BusinessValidationException;
 import org.viators.argo.common.exceptions.DuplicateResourceException;
 import org.viators.argo.common.exceptions.InvalidStateException;
 import org.viators.argo.common.exceptions.ResourceNotFoundException;
@@ -42,6 +43,11 @@ public class ItemService {
         ItemT item = request.toEntity();
         item.setItemCode(generateItemCode(request.itemCategory()));
 
+        if (StringUtils.hasText(request.partNumber()) && !StringUtils.hasText(request.manufacturer())) {
+            throw new BusinessValidationException(
+                "In order to provide partNumber you have to provide the corresponding manufacturer also"
+            );
+        }
         itemRepository.findByPartNumberAndManufacturer(request.partNumber(), request.manufacturer())
             .ifPresent(i -> {
                 throw new DuplicateResourceException("There is already a partNumber with same manufacturer");
