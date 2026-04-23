@@ -35,6 +35,7 @@ public record RequisitionDetailsResponse(
     String cancelledBy,
     ResourceStatusEnum status,
     Instant createdAt,
+    String createdBy,
     Set<RequisitionLineSummaryResponse> reqLines
 ) {
 
@@ -64,6 +65,7 @@ public record RequisitionDetailsResponse(
             .cancelledBy(entity.getCancelledBy())
             .status(entity.getStatus())
             .createdAt(entity.getCreatedAt())
+            .createdBy(entity.getCreatedBy())
             .reqLines(entity.getLines().stream()
                 .map(RequisitionLineSummaryResponse::from)
                 .collect(Collectors.toSet()))

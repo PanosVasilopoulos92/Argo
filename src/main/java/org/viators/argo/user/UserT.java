@@ -43,6 +43,6 @@ public class UserT extends BaseEntity {
     private UserRoleEnum userRole;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "person_id", referencedColumnName = "id")
+    @JoinColumn(name = "person_id", referencedColumnName = "id", updatable = false)
     private PersonT person;
 }

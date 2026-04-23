@@ -18,4 +18,10 @@ public class PersonQueryService {
         return personRepository.findByPublicId(publicId)
             .orElseThrow(() -> new ResourceNotFoundException("Person", "publicId", publicId));
     }
+
+    public PersonT getPersonByDatabaseId(Long personId) {
+        return personRepository.findById(personId)
+            .orElseThrow(() -> new ResourceNotFoundException("Person", "Id", personId));
+    }
+
 }

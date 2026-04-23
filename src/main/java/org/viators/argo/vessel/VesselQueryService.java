@@ -18,4 +18,10 @@ public class VesselQueryService {
         return vesselRepository.findByPublicId(publicId)
             .orElseThrow(() -> new ResourceNotFoundException("Vessel", "publicId", publicId));
     }
+
+    @Transactional(readOnly = true)
+    public VesselT getResourceByDatabaseId(Long vesselId) {
+        return vesselRepository.findById(vesselId)
+            .orElseThrow(() -> new ResourceNotFoundException("Vessel", "Id", vesselId));
+    }
 }
