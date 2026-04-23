@@ -21,6 +21,9 @@ public class RequisitionSequenceT {
     @Column(name = "year", nullable = false, updatable = false)
     private Integer year;
 
-    @Column(name = "last_value", nullable = false)
+    @Column(name = "last_value", nullable = false, updatable = false)
     private Long lastValue;
+
+    @Column(name = "final_formated_value", nullable = false, updatable = false)
+    private String finalFormattedValue;
 }

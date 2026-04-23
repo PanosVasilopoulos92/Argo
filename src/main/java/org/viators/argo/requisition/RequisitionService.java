@@ -1,5 +1,6 @@
 package org.viators.argo.requisition;
 
+import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -7,12 +8,16 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.viators.argo.common.enums.ResourceStatusEnum;
 import org.viators.argo.common.exceptions.InvalidStateException;
+import org.viators.argo.common.exceptions.ResourceNotFoundException;
 import org.viators.argo.item.ItemQueryService;
 import org.viators.argo.item.ItemT;
+import org.viators.argo.person.PersonQueryService;
 import org.viators.argo.person.PersonT;
 import org.viators.argo.requisition.dto.request.CreateRequisitionLineRequest;
 import org.viators.argo.requisition.dto.request.CreateRequisitionRequest;
+import org.viators.argo.requisition.dto.request.SubmitRequisitionRequest;
 import org.viators.argo.requisition.dto.response.RequisitionDetailsResponse;
+import org.viators.argo.requisition.enums.RequisitionStateEnum;
 import org.viators.argo.requisition.enums.RequisitionTypeEnum;
 import org.viators.argo.requisition.sequence.RequisitionSequenceRepository;
 import org.viators.argo.requisition.sequence.RequisitionSequenceT;
@@ -21,7 +26,10 @@ import org.viators.argo.user.UserT;
 import org.viators.argo.vessel.VesselQueryService;
 import org.viators.argo.vessel.VesselT;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Objects;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -29,13 +37,16 @@ import java.time.LocalDate;
 public class RequisitionService {
 
     private final RequisitionRepository requisitionRepository;
+    private final RequisitionLineRepository requisitionLineRepository;
     private final VesselQueryService vesselQueryService;
     private final ItemQueryService itemQueryService;
     private final RequisitionSequenceRepository requisitionSequenceRepository;
     private final UserService userService;
+    private final PersonQueryService personQueryService;
+
 
     @Transactional
-    public RequisitionDetailsResponse create(String keycloakId, CreateRequisitionRequest request) {
+    public RequisitionDetailsResponse createDraft(String keycloakId, CreateRequisitionRequest request) {
         RequisitionT requisition = request.toEntity();
 
         checkRequisitionTypeValidity(request);
@@ -53,11 +64,6 @@ public class RequisitionService {
 
         UserT loggedInUser = userService.getUser(keycloakId);
         PersonT raisedBy = loggedInUser.getPerson();
-        if (raisedBy.getStatus().equals(ResourceStatusEnum.INACTIVE)) {
-            throw new InvalidStateException("Person with public Id: %s is inactive. Requisition cannot continue further"
-                .formatted(raisedBy.getPublicId()));
-        }
-
         requisition.setRaisedBy(raisedBy);
         requisition.setRequisitionNumber(generateReqNumber());
 
@@ -77,30 +83,110 @@ public class RequisitionService {
         return RequisitionDetailsResponse.from(requisition);
     }
 
-    private String generateReqNumber() {
-        int year = LocalDate.now().getYear();
-        RequisitionSequenceT lastSequenceForCurrentYear = requisitionSequenceRepository.findTop1ByYearOrderByLastValueDesc(year)
-            .orElse(new RequisitionSequenceT(year, 0L));
+    @Transactional
+    public RequisitionDetailsResponse submitRequisition(String keycloakId,
+                                                        String reqPublicId,
+                                                        SubmitRequisitionRequest request
+    ) {
+        RequisitionT requisition = loadResourceAndCheckStatusAndVersion(reqPublicId, request.version());
+        validateReqCanTransitionToDesirableState(requisition);
 
-        RequisitionSequenceT nextSequenceForCurrentYear = new RequisitionSequenceT(
-            year, lastSequenceForCurrentYear.getLastValue() + 1L
-        );
-        requisitionSequenceRepository.save(nextSequenceForCurrentYear);
+        // Relationships validation
+        validateReqLine(requisition.getLines());
+        Long vesselId = requisition.getTargetVessel() != null
+            ? requisition.getTargetVessel().getId()
+            : null;
+        relationshipsStillActive(requisition.getRequisitionType(), requisition.getRaisedBy().getId(), vesselId);
 
-        return ("REQ-" + nextSequenceForCurrentYear.getYear())
-            .concat("-" + String.format("06%d", nextSequenceForCurrentYear.getLastValue()));
+        UserT user = userService.getUser(keycloakId);
+        requisition.setSubmittedAt(Instant.now());
+        requisition.setSubmittedBy(user.getUsername());
+
+        requisitionRepository.save(requisition);
+        return RequisitionDetailsResponse.from(requisition);
     }
 
     // Private helper methods
+    private String generateReqNumber() {
+        int year = LocalDate.now().getYear();
+        RequisitionSequenceT lastSequenceForCurrentYear = requisitionSequenceRepository.findTop1ByYearOrderByLastValueDesc(year)
+            .orElse(new RequisitionSequenceT(year, 0L, null));
+
+        RequisitionSequenceT nextSequenceForCurrentYear = new RequisitionSequenceT(
+            year,
+            lastSequenceForCurrentYear.getLastValue() + 1L,
+            null
+        );
+
+        String finalReqNumberFormat = ("REQ-" + nextSequenceForCurrentYear.getYear())
+            .concat("-" + String.format("06%d", nextSequenceForCurrentYear.getLastValue()));
+
+        nextSequenceForCurrentYear.setFinalFormattedValue(finalReqNumberFormat);
+
+        requisitionSequenceRepository.save(nextSequenceForCurrentYear);
+
+        return finalReqNumberFormat;
+    }
+
     private void checkRequisitionTypeValidity(CreateRequisitionRequest request) {
         if (request.requisitionType().equals(RequisitionTypeEnum.OFFICE)
             && StringUtils.hasText(request.targetVesselPublicId())) {
-            throw new InvalidStateException("If requisition is of type 'OFFICE' you cannot provide target vessel.");
+            throw new InvalidStateException("If requisition is of type 'OFFICE' you cannot provide target vessel");
         }
 
         if (request.requisitionType().equals(RequisitionTypeEnum.VESSEL)
             && !StringUtils.hasText(request.targetVesselPublicId())) {
-            throw new InvalidStateException("If requisition is of type 'VESSEL' you must also provide the target vessel.");
+            throw new InvalidStateException("If requisition is of type 'VESSEL' you must also provide the target vessel");
+        }
+    }
+
+    private void validateReqCanTransitionToDesirableState(RequisitionT requisition) {
+        if (!RequisitionStateEnum.DRAFT.equals(requisition.getRequisitionState())) {
+            throw new InvalidStateException("Requisition with public Id: %s is in '%s' state and cannot transition to state 'SUBMITTED'"
+                .formatted(requisition.getPublicId(), requisition.getRequisitionState().name()));
+        }
+    }
+
+    private void validateReqLine(Set<RequisitionLineT> lines) {
+        lines.forEach(line -> {
+            ItemT item = itemQueryService.getItemByItemCode(line.getSnapShotItemCode());
+            if (ResourceStatusEnum.INACTIVE.equals(item.getStatus())) {
+                throw new InvalidStateException("Item with item code: %s has been deactivated. Requisition cannot proceed"
+                    .formatted(line.getSnapShotItemCode())
+                );
+            }
+        });
+    }
+
+    private RequisitionT loadResourceAndCheckStatusAndVersion(String reqPublicId, Long requestResourceVersion) {
+        RequisitionT requisition = requisitionRepository.findByPublicId(reqPublicId)
+            .orElseThrow(() -> new ResourceNotFoundException("Requisition", "public Id", reqPublicId));
+
+        if (ResourceStatusEnum.INACTIVE.equals(requisition.getStatus())) {
+            throw new InvalidStateException("Requisition with public Id: %s is inactive. No further actions can be made."
+                .formatted(requisition.getPublicId()));
+        }
+
+        if (!Objects.equals(requestResourceVersion, requisition.getVersion())) {
+            throw new OptimisticLockException("Another user has already modified this resource. Please try again");
+        }
+
+        return requisition;
+    }
+
+    private void relationshipsStillActive(RequisitionTypeEnum reqType, Long personId, Long vesselId) {
+        PersonT person = personQueryService.getPersonByDatabaseId(personId);
+        if (ResourceStatusEnum.INACTIVE.equals(person.getStatus())) {
+            throw new InvalidStateException("Person that created/raised requisition has been deactivated" +
+                " Requisition cannot proceed");
+        }
+
+        if (RequisitionTypeEnum.VESSEL.equals(reqType)) {
+            VesselT vessel = vesselQueryService.getResourceByDatabaseId(vesselId);
+            if (ResourceStatusEnum.INACTIVE.equals(vessel.getStatus())) {
+                throw new InvalidStateException("Vessel for which requisition has been created/raised is now deactivated" +
+                    " Requisition cannot proceed");
+            }
         }
     }
 }

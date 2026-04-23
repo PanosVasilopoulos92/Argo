@@ -7,6 +7,7 @@ import org.viators.argo.assignment.AssignmentT;
 import org.viators.argo.certificate.person.PersonCertificateT;
 import org.viators.argo.common.entity.BaseEntity;
 import org.viators.argo.common.enums.GenderEnum;
+import org.viators.argo.user.UserT;
 
 import java.time.LocalDate;
 import java.util.HashSet;
@@ -67,6 +68,9 @@ public abstract class PersonT extends BaseEntity {
 
     @OneToMany(mappedBy = "person", fetch = FetchType.LAZY)
     private Set<PersonCertificateT> certificates = new HashSet<>();
+
+    @OneToOne(mappedBy = "person")
+    private UserT user;
 
     // Helper methods
     public void addCertificate(PersonCertificateT certificate) {
