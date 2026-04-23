@@ -36,7 +36,8 @@ public record RequisitionDetailsResponse(
     ResourceStatusEnum status,
     Instant createdAt,
     String createdBy,
-    Set<RequisitionLineSummaryResponse> reqLines
+    Set<RequisitionLineSummaryResponse> reqLines,
+    Long version
 ) {
 
     public static RequisitionDetailsResponse from(RequisitionT entity) {
@@ -69,6 +70,7 @@ public record RequisitionDetailsResponse(
             .reqLines(entity.getLines().stream()
                 .map(RequisitionLineSummaryResponse::from)
                 .collect(Collectors.toSet()))
+            .version(entity.getVersion())
             .build();
     }
 }

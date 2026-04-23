@@ -42,6 +42,10 @@ public class UserT extends BaseEntity {
     @Column(name = "role", nullable = false)
     private UserRoleEnum userRole;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "level", nullable = false)
+    private UserLevelEnum userLevel;
+
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "person_id", referencedColumnName = "id", updatable = false)
     private PersonT person;

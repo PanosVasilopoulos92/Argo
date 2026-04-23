@@ -7,15 +7,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.viators.argo.common.enums.ResourceStatusEnum;
+import org.viators.argo.common.exceptions.BusinessValidationException;
 import org.viators.argo.common.exceptions.InvalidStateException;
 import org.viators.argo.common.exceptions.ResourceNotFoundException;
 import org.viators.argo.item.ItemQueryService;
 import org.viators.argo.item.ItemT;
 import org.viators.argo.person.PersonQueryService;
 import org.viators.argo.person.PersonT;
-import org.viators.argo.requisition.dto.request.CreateRequisitionLineRequest;
-import org.viators.argo.requisition.dto.request.CreateRequisitionRequest;
-import org.viators.argo.requisition.dto.request.SubmitRequisitionRequest;
+import org.viators.argo.requisition.dto.request.*;
 import org.viators.argo.requisition.dto.response.RequisitionDetailsResponse;
 import org.viators.argo.requisition.enums.RequisitionStateEnum;
 import org.viators.argo.requisition.enums.RequisitionTypeEnum;
@@ -37,7 +36,6 @@ import java.util.Set;
 public class RequisitionService {
 
     private final RequisitionRepository requisitionRepository;
-    private final RequisitionLineRepository requisitionLineRepository;
     private final VesselQueryService vesselQueryService;
     private final ItemQueryService itemQueryService;
     private final RequisitionSequenceRepository requisitionSequenceRepository;
@@ -89,7 +87,10 @@ public class RequisitionService {
                                                         SubmitRequisitionRequest request
     ) {
         RequisitionT requisition = loadResourceAndCheckStatusAndVersion(reqPublicId, request.version());
-        validateReqCanTransitionToDesirableState(requisition);
+        if (isReqStateTransitionNotValid(requisition.getRequisitionState(), RequisitionStateEnum.SUBMITTED)) {
+            throw new InvalidStateException("Requisition with public Id: %s is in '%s' state and cannot transition to state 'SUBMITTED'"
+                .formatted(requisition.getPublicId(), requisition.getRequisitionState().name()));
+        }
 
         // Relationships validation
         validateReqLine(requisition.getLines());
@@ -103,6 +104,50 @@ public class RequisitionService {
         requisition.setSubmittedBy(user.getUsername());
 
         requisitionRepository.save(requisition);
+        return RequisitionDetailsResponse.from(requisition);
+    }
+
+    @Transactional
+    public RequisitionDetailsResponse approveRequisition(String keycloakId,
+                                                         String reqPublicId,
+                                                         ApproveRequisitionRequest request
+    ) {
+        RequisitionT requisition = loadResourceAndCheckStatusAndVersion(reqPublicId, request.version());
+        UserT loggedInUser = userService.getUser(keycloakId);
+
+        if (isReqStateTransitionNotValid(requisition.getRequisitionState(), RequisitionStateEnum.APPROVED)) {
+            throw new InvalidStateException("Requisition with public Id: %s is in '%s' state and cannot transition to state 'APPROVED'"
+                .formatted(requisition.getPublicId(), requisition.getRequisitionState().name()));
+        }
+
+        validateApproverIsNotCreatorOrSubmitter(requisition, loggedInUser.getUsername());
+
+        requisition.setApprovedAt(Instant.now());
+        requisition.setApprovedBy(loggedInUser.getUsername());
+        requisition.setApprovalRemarks(request.approvalRemarks());
+
+        return RequisitionDetailsResponse.from(requisition);
+    }
+
+    @Transactional
+    public RequisitionDetailsResponse rejectRequisition(String keycloakId,
+                                                        String reqPublicId,
+                                                        RejectRequisitionRequest request
+    ) {
+        RequisitionT requisition = loadResourceAndCheckStatusAndVersion(reqPublicId, request.version());
+        UserT loggedInUser = userService.getUser(keycloakId);
+
+        if (isReqStateTransitionNotValid(requisition.getRequisitionState(), RequisitionStateEnum.REJECTED)) {
+            throw new InvalidStateException("Requisition with public Id: %s is in '%s' state and cannot transition to state 'REJECTED'"
+                .formatted(requisition.getPublicId(), requisition.getRequisitionState().name()));
+        }
+
+        validateApproverIsNotCreatorOrSubmitter(requisition, loggedInUser.getUsername());
+
+        requisition.setRejectedAt(Instant.now());
+        requisition.setRejectedBy(loggedInUser.getUsername());
+        requisition.setRejectedReason(request.rejectedReason());
+
         return RequisitionDetailsResponse.from(requisition);
     }
 
@@ -140,10 +185,22 @@ public class RequisitionService {
         }
     }
 
-    private void validateReqCanTransitionToDesirableState(RequisitionT requisition) {
-        if (!RequisitionStateEnum.DRAFT.equals(requisition.getRequisitionState())) {
-            throw new InvalidStateException("Requisition with public Id: %s is in '%s' state and cannot transition to state 'SUBMITTED'"
-                .formatted(requisition.getPublicId(), requisition.getRequisitionState().name()));
+    private boolean isReqStateTransitionNotValid(RequisitionStateEnum fromState, RequisitionStateEnum toState) {
+        return !switch (fromState) {
+            case DRAFT ->
+                toState.equals(RequisitionStateEnum.SUBMITTED) || toState.equals(RequisitionStateEnum.CANCELLED);
+            case SUBMITTED ->
+                toState.equals(RequisitionStateEnum.REJECTED) || toState.equals(RequisitionStateEnum.APPROVED);
+            case APPROVED, REJECTED, CANCELLED -> false;
+        };
+    }
+
+    private void validateApproverIsNotCreatorOrSubmitter(RequisitionT requisition, String approverUsername) {
+        if (requisition.getCreatedBy().equals(approverUsername) ||
+            requisition.getSubmittedBy().equals(approverUsername)) {
+            throw new BusinessValidationException("Approver must be a different person than the one created or submitted the requisition." +
+                "Created by %s and submitted by %s. Tried to get approved/rejected by %s"
+                    .formatted(requisition.getCreatedBy(), requisition.getSubmittedBy(), approverUsername));
         }
     }
 
@@ -168,7 +225,7 @@ public class RequisitionService {
         }
 
         if (!Objects.equals(requestResourceVersion, requisition.getVersion())) {
-            throw new OptimisticLockException("Another user has already modified this resource. Please try again");
+            throw new OptimisticLockException("Another user in the mean time has modified this resource. Please try again");
         }
 
         return requisition;
