@@ -2,15 +2,13 @@ package org.viators.argo.requisition;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.viators.argo.config.CurrentKeycloakId;
 import org.viators.argo.requisition.dto.request.CreateRequisitionRequest;
+import org.viators.argo.requisition.dto.request.SubmitRequisitionRequest;
 import org.viators.argo.requisition.dto.response.RequisitionDetailsResponse;
 
 import java.net.URI;
@@ -28,9 +26,24 @@ public class RequisitionController {
         @CurrentKeycloakId String keycloakId,
         @Valid @RequestBody CreateRequisitionRequest request
     ) {
-        RequisitionDetailsResponse response = requisitionService.create(keycloakId, request);
+        RequisitionDetailsResponse response = requisitionService.createDraft(keycloakId, request);
         return ResponseEntity
             .created(URI.create("/api/v1/requisitions/" + response.reqPublicId()))
             .body(response);
     }
+
+    @PreAuthorize("hasAnyRole('FOM', 'PROCUREMENT_CLERK')")
+    @PostMapping("/{reqPublicId}/submit")
+    public ResponseEntity<RequisitionDetailsResponse> submitRequisition(
+        @CurrentKeycloakId String keycloakId,
+        @PathVariable String reqPublicId,
+        @Valid @RequestBody SubmitRequisitionRequest request
+    ) {
+        RequisitionDetailsResponse response = requisitionService.submitRequisition(
+            keycloakId, reqPublicId, request
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
 }

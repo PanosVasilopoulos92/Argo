@@ -16,4 +16,14 @@ public class ItemQueryService {
         return itemRepository.findByPublicId(resourcePublicId)
             .orElseThrow(() -> new ResourceNotFoundException("Item", "publicId", resourcePublicId));
     }
+
+    public ItemT getResourceByDatabaseId(Long resourceId) {
+        return itemRepository.findById(resourceId)
+            .orElseThrow(() -> new ResourceNotFoundException("Item", "id", resourceId));
+    }
+
+    public ItemT getItemByItemCode(String itemCode) {
+        return itemRepository.findByPublicId(itemCode)
+            .orElseThrow(() -> new ResourceNotFoundException("Item", "itemCode", itemCode));
+    }
 }

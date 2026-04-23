@@ -5,7 +5,7 @@ public class InvalidStateException extends BaseException {
         super(message, ErrorCodeEnum.INVALID_STATE);
     }
 
-    public InvalidStateException(String resource, String currentState, String attemptedAction) {
+    public InvalidStateException(String attemptedAction, String resource, String currentState) {
         super(
                 String.format("Cannot %s %s in %s state", attemptedAction, resource, currentState),
                 ErrorCodeEnum.INVALID_STATE
