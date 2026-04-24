@@ -34,7 +34,7 @@ public record CreateRequisitionLineRequest(
             .snapshotItemCategory(item.getItemCategory())
             .snapshotManufacturer(item.getManufacturer())
             .snapShotItemCode(item.getItemCode())
-            .snapshotUnitOfMeasurement(item.getItemCode())
+            .snapshotUnitOfMeasurement(unitOfMeasurement)
             .snapShotItemName(item.getName())
             .build();
     }

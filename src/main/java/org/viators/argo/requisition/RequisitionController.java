@@ -24,7 +24,7 @@ public class RequisitionController {
 
     private final RequisitionService requisitionService;
 
-    @PreAuthorize("hasAnyRole('FOM', 'PROCUREMENT_CLERK')")
+    @PreAuthorize("hasAnyRole('PROCUREMENT_CLERK', 'PROCUREMENT_MANAGER')")
     @PostMapping
     public ResponseEntity<RequisitionDetailsResponse> create(
         @CurrentKeycloakId String keycloakId,
@@ -37,7 +37,7 @@ public class RequisitionController {
             .body(response);
     }
 
-    @PreAuthorize("hasAnyRole('FOM', 'PROCUREMENT_CLERK')")
+    @PreAuthorize("hasAnyRole('PROCUREMENT_CLERK', 'PROCUREMENT_MANAGER')")
     @PatchMapping("/{reqPublicId}/submit")
     public ResponseEntity<RequisitionDetailsResponse> submitRequisition(
         @CurrentKeycloakId String keycloakId,
@@ -49,6 +49,7 @@ public class RequisitionController {
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("hasAnyRole('PROCUREMENT_MANAGER', 'PROCUREMENT_APPROVER')")
     @PatchMapping("/{reqPublicId}/approve")
     public ResponseEntity<RequisitionDetailsResponse> approveRequisition(
         @CurrentKeycloakId String keycloakId,
@@ -62,6 +63,7 @@ public class RequisitionController {
     }
 
 
+    @PreAuthorize("hasAnyRole('PROCUREMENT_MANAGER'. 'PROCUREMENT_APPROVER')")
     @PatchMapping("/{reqPublicId}/reject")
     public ResponseEntity<RequisitionDetailsResponse> rejectRequisition(
         @CurrentKeycloakId String keycloakId,
@@ -74,6 +76,17 @@ public class RequisitionController {
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("hasAnyRole('PROCUREMENT_CLERK', 'PROCUREMENT_MANAGER')")
+    @PatchMapping("/{reqPublicId/cancel}")
+    public ResponseEntity<Void> cancelDraftRequisition(
+        @CurrentKeycloakId String keycloakId,
+        @PathVariable String reqPublicId,
+        @Valid @RequestBody CancelDraftRequisitionRequest request
+    ) {
+        requisitionService.cancelRequisitionDraft(keycloakId, reqPublicId, request);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/filtered")
     public ResponseEntity<Page<RequisitionSummaryResponse>> getRequisitionsFiltered(
         @ModelAttribute RequisitionSearchFilterRequest request,
@@ -84,6 +97,7 @@ public class RequisitionController {
 
         return ResponseEntity.ok(response);
     }
+
 
     @GetMapping("/{reqPublicId}")
     public ResponseEntity<ReqDetailsWithRelationshipsSummaryResponse> getRequisitionDetailsWithRelationshipsSummary(

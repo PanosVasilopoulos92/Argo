@@ -1,6 +1,7 @@
 package org.viators.argo.requisition.dto.response;
 
 import org.viators.argo.common.enums.ResourceStatusEnum;
+import org.viators.argo.item.enums.UnitOfMeasurementEnum;
 import org.viators.argo.requisition.RequisitionLineT;
 
 import java.math.BigDecimal;
@@ -9,7 +10,7 @@ public record RequisitionLineSummaryResponse(
     String reqLinePublicId,
     BigDecimal quantity,
     String snapShotItemCode,
-    String snapshotUnitOfMeasurement,
+    UnitOfMeasurementEnum snapshotUnitOfMeasurement,
     ResourceStatusEnum status
 ) {
 

@@ -14,6 +14,9 @@ import java.time.LocalDate;
 import java.util.Set;
 
 public record CreateRequisitionRequest(
+    @NotNull(message = "'Raised by' field is required")
+    String raisedByPublicId,
+
     @NotNull(message = "Requisition type is required")
     RequisitionTypeEnum requisitionType,
 
@@ -23,7 +26,7 @@ public record CreateRequisitionRequest(
     String remarks,
 
     @FutureOrPresent(message = "Required-by date cannot be in the past")
-    Instant requiredByDate,
+    LocalDate requiredByDate,
 
     @Size(max = 100, message = "Target vessel public id must be at most 100 characters long")
     String targetVesselPublicId,

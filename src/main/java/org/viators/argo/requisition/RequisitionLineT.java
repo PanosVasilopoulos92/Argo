@@ -44,7 +44,7 @@ public class RequisitionLineT extends BaseEntity {
     private String snapshotManufacturer;
 
     @Column(name = "snapshot_unit_of_measurement", nullable = false, updatable = false)
-    private String snapshotUnitOfMeasurement;
+    private UnitOfMeasurementEnum snapshotUnitOfMeasurement;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "item_id", referencedColumnName = "id", nullable = false, updatable = false)

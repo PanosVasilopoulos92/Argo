@@ -6,6 +6,7 @@ import org.viators.argo.requisition.enums.RequisitionStateEnum;
 import org.viators.argo.requisition.enums.RequisitionTypeEnum;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Set;
 
 public class RequisitionSpecs {
@@ -50,7 +51,7 @@ public class RequisitionSpecs {
         };
     }
 
-    public static Specification<RequisitionT> hasRequiredDate(Instant dateFrom, Instant dateTo) {
+    public static Specification<RequisitionT> hasRequiredDate(LocalDate dateFrom, LocalDate dateTo) {
         return (root, query, cb) -> {
             if (dateTo != null && dateFrom != null) {
                 return cb.between(root.get("requiredByDate"), dateFrom, dateTo);
