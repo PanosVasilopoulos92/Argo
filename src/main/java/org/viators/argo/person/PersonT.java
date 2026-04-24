@@ -66,6 +66,9 @@ public abstract class PersonT extends BaseEntity {
     @Column(name = "bank_account", length = 20)
     private String bankAccount;
 
+    @Column(name = "person_type", insertable = false, updatable = false)
+    private String personType;
+
     @OneToMany(mappedBy = "person", fetch = FetchType.LAZY)
     private Set<PersonCertificateT> certificates = new HashSet<>();
 

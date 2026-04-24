@@ -2,18 +2,21 @@ package org.viators.argo.requisition.dto.response;
 
 import lombok.Builder;
 import org.viators.argo.common.enums.ResourceStatusEnum;
+import org.viators.argo.person.PersonSummaryResponse;
+import org.viators.argo.person.PersonT;
 import org.viators.argo.requisition.RequisitionT;
 import org.viators.argo.requisition.enums.RequisitionPriorityEnum;
 import org.viators.argo.requisition.enums.RequisitionStateEnum;
 import org.viators.argo.requisition.enums.RequisitionTypeEnum;
+import org.viators.argo.vessel.VesselT;
+import org.viators.argo.vessel.dto.response.VesselSummaryResponse;
 
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Builder
-public record RequisitionDetailsResponse(
+public record ReqDetailsWithRelationshipsSummaryResponse(
     String reqPublicId,
     String reqNumber,
     RequisitionTypeEnum reqType,
@@ -21,8 +24,8 @@ public record RequisitionDetailsResponse(
     RequisitionPriorityEnum reqPriority,
     String remarks,
     Instant requiredByDate,
-    String raisedByPublicId,
-    String targetVesselPublicId,
+    PersonSummaryResponse raisedByPersonSummary,
+    VesselSummaryResponse targetVesselSummary,
     Instant submittedAt,
     String submittedBy,
     Instant approvedAt,
@@ -40,8 +43,11 @@ public record RequisitionDetailsResponse(
     Long version
 ) {
 
-    public static RequisitionDetailsResponse from(RequisitionT entity) {
-        return RequisitionDetailsResponse.builder()
+    public static ReqDetailsWithRelationshipsSummaryResponse from(RequisitionT entity) {
+        PersonT raisedBy = entity.getRaisedBy();
+        VesselT targetVessel = entity.getTargetVessel();
+
+        return ReqDetailsWithRelationshipsSummaryResponse.builder()
             .reqPublicId(entity.getPublicId())
             .reqNumber(entity.getRequisitionNumber())
             .reqType(entity.getRequisitionType())
@@ -49,9 +55,9 @@ public record RequisitionDetailsResponse(
             .reqPriority(entity.getRequisitionPriority())
             .remarks(entity.getRemarks())
             .requiredByDate(entity.getRequiredByDate())
-            .raisedByPublicId(entity.getRaisedBy().getPublicId())
-            .targetVesselPublicId(entity.getTargetVessel() != null
-                ? entity.getTargetVessel().getPublicId()
+            .raisedByPersonSummary(PersonSummaryResponse.from(raisedBy))
+            .targetVesselSummary(targetVessel != null
+                ? VesselSummaryResponse.from(targetVessel)
                 : null
             )
             .submittedAt(entity.getSubmittedAt())
