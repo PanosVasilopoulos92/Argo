@@ -9,6 +9,7 @@ import org.viators.argo.requisition.RequisitionT;
 import org.viators.argo.requisition.enums.RequisitionPriorityEnum;
 import org.viators.argo.requisition.enums.RequisitionTypeEnum;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Set;
 
@@ -22,7 +23,7 @@ public record CreateRequisitionRequest(
     String remarks,
 
     @FutureOrPresent(message = "Required-by date cannot be in the past")
-    LocalDate requiredByDate,
+    Instant requiredByDate,
 
     @Size(max = 100, message = "Target vessel public id must be at most 100 characters long")
     String targetVesselPublicId,

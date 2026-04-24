@@ -11,6 +11,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.viators.argo.config.CurrentKeycloakId;
 import org.viators.argo.requisition.dto.request.*;
+import org.viators.argo.requisition.dto.response.ReqDetailsWithRelationshipsSummaryResponse;
 import org.viators.argo.requisition.dto.response.RequisitionDetailsResponse;
 import org.viators.argo.requisition.dto.response.RequisitionSummaryResponse;
 
@@ -82,6 +83,13 @@ public class RequisitionController {
             request, pageable);
 
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{reqPublicId}")
+    public ResponseEntity<ReqDetailsWithRelationshipsSummaryResponse> getRequisitionDetailsWithRelationshipsSummary(
+        @PathVariable String reqPublicId
+    ) {
+        return ResponseEntity.ok(requisitionService.getRequisitionDetailsWithRelationshipsSummary(reqPublicId));
     }
 
 }

@@ -18,6 +18,7 @@ import org.viators.argo.item.ItemT;
 import org.viators.argo.person.PersonQueryService;
 import org.viators.argo.person.PersonT;
 import org.viators.argo.requisition.dto.request.*;
+import org.viators.argo.requisition.dto.response.ReqDetailsWithRelationshipsSummaryResponse;
 import org.viators.argo.requisition.dto.response.RequisitionDetailsResponse;
 import org.viators.argo.requisition.dto.response.RequisitionSummaryResponse;
 import org.viators.argo.requisition.enums.RequisitionStateEnum;
@@ -40,7 +41,6 @@ import java.util.Set;
 public class RequisitionService {
 
     private final RequisitionRepository requisitionRepository;
-    private final RequisitionLineRepository requisitionLineRepository;
     private final VesselQueryService vesselQueryService;
     private final ItemQueryService itemQueryService;
     private final RequisitionSequenceRepository requisitionSequenceRepository;
@@ -157,6 +157,13 @@ public class RequisitionService {
     }
 
     // Read only methods
+    public ReqDetailsWithRelationshipsSummaryResponse getRequisitionDetailsWithRelationshipsSummary(String reqPublicId) {
+        RequisitionT requisition = requisitionRepository.findByPublicId(reqPublicId)
+            .orElseThrow(() -> new ResourceNotFoundException("Requisition", "publicId", reqPublicId));
+
+        return ReqDetailsWithRelationshipsSummaryResponse.from(requisition);
+    }
+
     @Transactional(readOnly = true)
     public Page<RequisitionSummaryResponse> getRequisitionFiltered(
         RequisitionSearchFilterRequest request, Pageable pageable
