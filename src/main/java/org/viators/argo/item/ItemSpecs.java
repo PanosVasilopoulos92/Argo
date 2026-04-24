@@ -5,7 +5,6 @@ import org.springframework.stereotype.Component;
 import org.viators.argo.common.enums.ResourceStatusEnum;
 import org.viators.argo.item.enums.ItemCategoryEnum;
 
-@Component
 public class ItemSpecs {
 
     public static Specification<ItemT> isActive() {
