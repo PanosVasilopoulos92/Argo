@@ -1,11 +1,9 @@
 package org.viators.argo.person.seafarer;
 
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.stereotype.Component;
 import org.viators.argo.common.enums.ResourceStatusEnum;
 import org.viators.argo.person.seafarer.enums.SeafarerRankEnum;
 
-@Component
 public class SeafarerSpecs {
 
     public static Specification<SeafarerT> isActive() {

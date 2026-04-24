@@ -3,6 +3,9 @@ package org.viators.argo.requisition;
 import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -16,6 +19,7 @@ import org.viators.argo.person.PersonQueryService;
 import org.viators.argo.person.PersonT;
 import org.viators.argo.requisition.dto.request.*;
 import org.viators.argo.requisition.dto.response.RequisitionDetailsResponse;
+import org.viators.argo.requisition.dto.response.RequisitionSummaryResponse;
 import org.viators.argo.requisition.enums.RequisitionStateEnum;
 import org.viators.argo.requisition.enums.RequisitionTypeEnum;
 import org.viators.argo.requisition.sequence.RequisitionSequenceRepository;
@@ -36,6 +40,7 @@ import java.util.Set;
 public class RequisitionService {
 
     private final RequisitionRepository requisitionRepository;
+    private final RequisitionLineRepository requisitionLineRepository;
     private final VesselQueryService vesselQueryService;
     private final ItemQueryService itemQueryService;
     private final RequisitionSequenceRepository requisitionSequenceRepository;
@@ -149,6 +154,39 @@ public class RequisitionService {
         requisition.setRejectedReason(request.rejectedReason());
 
         return RequisitionDetailsResponse.from(requisition);
+    }
+
+    // Read only methods
+    @Transactional(readOnly = true)
+    public Page<RequisitionSummaryResponse> getRequisitionFiltered(
+        RequisitionSearchFilterRequest request, Pageable pageable
+    ) {
+        Specification<RequisitionT> specs = (root, query, cb) -> cb.conjunction();
+
+        if (request.requisitionType() != null) {
+            specs = specs.and(RequisitionSpecs.hasRequisitionType(request.requisitionType()));
+        }
+        if (StringUtils.hasText(request.vesselPublicId())) {
+            specs = specs.and(RequisitionSpecs.hasVesselPublicId(request.vesselPublicId()));
+        }
+        if (request.states() != null && !request.states().isEmpty()) {
+            specs = specs.and(RequisitionSpecs.hasState(request.states()));
+        }
+        if (StringUtils.hasText(request.raisedByPublicId())) {
+            specs = specs.and(RequisitionSpecs.hasBeenRaisedBy(request.raisedByPublicId()));
+        }
+        if (request.priority() != null) {
+            specs = specs.and(RequisitionSpecs.hasPriority(request.priority()));
+        }
+        if (StringUtils.hasText(request.reqNumber())) {
+            specs = specs.and(RequisitionSpecs.hasRequisitionNumber(request.reqNumber()));
+        }
+
+        specs = specs.and(RequisitionSpecs.hasCreatedDate(request.createdDateFrom(), request.createdDateTo()));
+        specs = specs.and(RequisitionSpecs.hasRequiredDate(request.requiredByDateFrom(), request.requiredByDateTo()));
+
+        return requisitionRepository.findAll(specs, pageable)
+            .map(RequisitionSummaryResponse::from);
     }
 
     // Private helper methods

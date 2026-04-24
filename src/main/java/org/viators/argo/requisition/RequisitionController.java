@@ -2,15 +2,17 @@ package org.viators.argo.requisition;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.viators.argo.config.CurrentKeycloakId;
-import org.viators.argo.requisition.dto.request.ApproveRequisitionRequest;
-import org.viators.argo.requisition.dto.request.CreateRequisitionRequest;
-import org.viators.argo.requisition.dto.request.RejectRequisitionRequest;
-import org.viators.argo.requisition.dto.request.SubmitRequisitionRequest;
+import org.viators.argo.requisition.dto.request.*;
 import org.viators.argo.requisition.dto.response.RequisitionDetailsResponse;
+import org.viators.argo.requisition.dto.response.RequisitionSummaryResponse;
 
 import java.net.URI;
 
@@ -28,6 +30,7 @@ public class RequisitionController {
         @Valid @RequestBody CreateRequisitionRequest request
     ) {
         RequisitionDetailsResponse response = requisitionService.createDraft(keycloakId, request);
+
         return ResponseEntity
             .created(URI.create("/api/v1/requisitions/" + response.reqPublicId()))
             .body(response);
@@ -53,6 +56,7 @@ public class RequisitionController {
     ) {
         RequisitionDetailsResponse response = requisitionService.approveRequisition(
             keycloakId, reqPublicId, request);
+
         return ResponseEntity.ok(response);
     }
 
@@ -65,6 +69,18 @@ public class RequisitionController {
     ) {
         RequisitionDetailsResponse response = requisitionService.rejectRequisition(
             keycloakId, reqPublicId, request);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/filtered")
+    public ResponseEntity<Page<RequisitionSummaryResponse>> getRequisitionsFiltered(
+        @ModelAttribute RequisitionSearchFilterRequest request,
+        @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        Page<RequisitionSummaryResponse> response = requisitionService.getRequisitionFiltered(
+            request, pageable);
+
         return ResponseEntity.ok(response);
     }
 

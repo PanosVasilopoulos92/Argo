@@ -3,6 +3,7 @@ package org.viators.argo.requisition;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.Formula;
 import org.viators.argo.common.entity.BaseEntity;
 import org.viators.argo.person.PersonT;
 import org.viators.argo.requisition.enums.RequisitionPriorityEnum;
@@ -11,7 +12,6 @@ import org.viators.argo.requisition.enums.RequisitionTypeEnum;
 import org.viators.argo.vessel.VesselT;
 
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -46,7 +46,7 @@ public class RequisitionT extends BaseEntity {
     private String remarks;
 
     @Column(name = "required_by_date")
-    private LocalDate requiredByDate;
+    private Instant requiredByDate;
 
     @Column(name = "submitted_at")
     private Instant submittedAt;
@@ -89,6 +89,10 @@ public class RequisitionT extends BaseEntity {
     @OneToMany(mappedBy = "requisition", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private Set<RequisitionLineT> lines = new HashSet<>();
+
+    @Formula("select count(rl.id) from requisition_lines rl where rl.requisition_id = id")
+    @Setter(AccessLevel.NONE)
+    private Integer numberOfLines;
 
     public void addReqLine(RequisitionLineT reqLine) {
         lines.add(reqLine);
