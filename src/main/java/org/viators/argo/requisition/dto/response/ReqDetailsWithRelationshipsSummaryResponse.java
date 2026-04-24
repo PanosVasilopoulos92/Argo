@@ -12,6 +12,7 @@ import org.viators.argo.vessel.VesselT;
 import org.viators.argo.vessel.dto.response.VesselSummaryResponse;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -23,7 +24,7 @@ public record ReqDetailsWithRelationshipsSummaryResponse(
     RequisitionStateEnum reqState,
     RequisitionPriorityEnum reqPriority,
     String remarks,
-    Instant requiredByDate,
+    LocalDate requiredByDate,
     PersonSummaryResponse raisedByPersonSummary,
     VesselSummaryResponse targetVesselSummary,
     Instant submittedAt,

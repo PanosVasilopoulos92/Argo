@@ -48,6 +48,7 @@ public class ItemService {
                 "In order to provide partNumber you have to provide the corresponding manufacturer also"
             );
         }
+
         itemRepository.findByPartNumberAndManufacturer(request.partNumber(), request.manufacturer())
             .ifPresent(i -> {
                 throw new DuplicateResourceException("There is already a partNumber with same manufacturer");

@@ -20,7 +20,7 @@ public record RequisitionDetailsResponse(
     RequisitionStateEnum reqState,
     RequisitionPriorityEnum reqPriority,
     String remarks,
-    Instant requiredByDate,
+    LocalDate requiredByDate,
     String raisedByPublicId,
     String targetVesselPublicId,
     Instant submittedAt,

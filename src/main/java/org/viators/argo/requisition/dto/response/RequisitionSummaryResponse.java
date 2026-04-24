@@ -8,6 +8,7 @@ import org.viators.argo.requisition.enums.RequisitionTypeEnum;
 import org.viators.argo.vessel.VesselT;
 
 import java.time.Instant;
+import java.time.LocalDate;
 
 public record RequisitionSummaryResponse(
     String reqPublicId,
@@ -17,7 +18,7 @@ public record RequisitionSummaryResponse(
     String raisedByFullName,
     RequisitionStateEnum requisitionState,
     RequisitionPriorityEnum requisitionPriority,
-    Instant requiredByDate,
+    LocalDate requiredByDate,
     Instant createdAt,
     Integer numberOfLines,
     String submittedBy
