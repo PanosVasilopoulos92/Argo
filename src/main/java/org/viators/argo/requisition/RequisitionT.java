@@ -12,6 +12,7 @@ import org.viators.argo.requisition.enums.RequisitionTypeEnum;
 import org.viators.argo.vessel.VesselT;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -46,7 +47,7 @@ public class RequisitionT extends BaseEntity {
     private String remarks;
 
     @Column(name = "required_by_date")
-    private Instant requiredByDate;
+    private LocalDate requiredByDate;
 
     @Column(name = "submitted_at")
     private Instant submittedAt;

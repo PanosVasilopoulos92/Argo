@@ -5,6 +5,7 @@ import org.viators.argo.requisition.enums.RequisitionStateEnum;
 import org.viators.argo.requisition.enums.RequisitionTypeEnum;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Set;
 
 public record RequisitionSearchFilterRequest(
@@ -15,8 +16,8 @@ public record RequisitionSearchFilterRequest(
     RequisitionPriorityEnum priority,
     Instant createdDateFrom,
     Instant createdDateTo,
-    Instant requiredByDateFrom,
-    Instant requiredByDateTo,
+    LocalDate requiredByDateFrom,
+    LocalDate requiredByDateTo,
     String reqNumber
 ) {
 }

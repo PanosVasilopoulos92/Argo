@@ -55,7 +55,6 @@ public class RequisitionService {
         checkRequisitionTypeValidity(request);
 
         if (StringUtils.hasText(request.targetVesselPublicId())) {
-
             VesselT targetVessel = vesselQueryService.getResourceByPublicId(request.targetVesselPublicId());
             if (targetVessel.getStatus().equals(ResourceStatusEnum.INACTIVE)) {
                 throw new InvalidStateException("Vessel with public Id: %s is inactive. Requisition cannot continue further"
@@ -65,8 +64,12 @@ public class RequisitionService {
             requisition.setTargetVessel(targetVessel);
         }
 
-        UserT loggedInUser = userService.getUser(keycloakId);
-        PersonT raisedBy = loggedInUser.getPerson();
+        PersonT raisedBy = personQueryService.getPersonByPublicId(request.raisedByPublicId());
+        if (ResourceStatusEnum.INACTIVE.equals(raisedBy.getStatus())) {
+            throw new InvalidStateException("Person with public Id: %s is inactive. Requisition cannot proceed"
+                .formatted(raisedBy.getPublicId()));
+        }
+
         requisition.setRaisedBy(raisedBy);
         requisition.setRequisitionNumber(generateReqNumber());
 
@@ -77,7 +80,7 @@ public class RequisitionService {
             ItemT item = itemQueryService.getResourcePublicId(lineRequest.itemPublicId());
             if (item.getStatus().equals(ResourceStatusEnum.INACTIVE)) {
                 throw new InvalidStateException("Item with public Id: %s is inactive. Requisition cannot continue further"
-                    .formatted(raisedBy.getPublicId()));
+                    .formatted(item.getPublicId()));
             }
             RequisitionLineT requisitionLine = lineRequest.toEntity(item);
             requisition.addReqLine(requisitionLine);
@@ -108,8 +111,7 @@ public class RequisitionService {
         requisition.setSubmittedAt(Instant.now());
         requisition.setSubmittedBy(user.getUsername());
 
-        requisitionRepository.save(requisition);
-        return RequisitionDetailsResponse.from(requisition);
+        return RequisitionDetailsResponse.from(requisitionRepository.save(requisition));
     }
 
     @Transactional
@@ -131,7 +133,7 @@ public class RequisitionService {
         requisition.setApprovedBy(loggedInUser.getUsername());
         requisition.setApprovalRemarks(request.approvalRemarks());
 
-        return RequisitionDetailsResponse.from(requisition);
+        return RequisitionDetailsResponse.from(requisitionRepository.save(requisition));
     }
 
     @Transactional
@@ -153,10 +155,33 @@ public class RequisitionService {
         requisition.setRejectedBy(loggedInUser.getUsername());
         requisition.setRejectedReason(request.rejectedReason());
 
-        return RequisitionDetailsResponse.from(requisition);
+        return RequisitionDetailsResponse.from(requisitionRepository.save(requisition));
+    }
+
+    @Transactional
+    public void cancelRequisitionDraft(String keycloakId,
+                                       String reqPublicId,
+                                       CancelDraftRequisitionRequest request) {
+        RequisitionT requisition = loadResourceAndCheckStatusAndVersion(reqPublicId, request.version());
+        UserT loggedInUser = userService.getUser(keycloakId);
+
+        if (isReqStateTransitionNotValid(requisition.getRequisitionState(), RequisitionStateEnum.CANCELLED)) {
+            throw new InvalidStateException("Requisition with public Id: %s is in '%s' state and cannot transition to state 'CANCELLED'"
+                .formatted(requisition.getPublicId(), requisition.getRequisitionState().name()));
+        }
+
+        requisition.setRequisitionState(RequisitionStateEnum.CANCELLED);
+        requisition.setCancelledAt(Instant.now());
+        requisition.setCancelledBy(loggedInUser.getUsername());
+
+        requisition.getLines()
+                .forEach(line -> line.setStatus(ResourceStatusEnum.INACTIVE));
+
+        requisitionRepository.save(requisition);
     }
 
     // Read only methods
+    @Transactional(readOnly = true)
     public ReqDetailsWithRelationshipsSummaryResponse getRequisitionDetailsWithRelationshipsSummary(String reqPublicId) {
         RequisitionT requisition = requisitionRepository.findByPublicId(reqPublicId)
             .orElseThrow(() -> new ResourceNotFoundException("Requisition", "publicId", reqPublicId));
@@ -253,7 +278,7 @@ public class RequisitionService {
         lines.forEach(line -> {
             ItemT item = itemQueryService.getItemByItemCode(line.getSnapShotItemCode());
             if (ResourceStatusEnum.INACTIVE.equals(item.getStatus())) {
-                throw new InvalidStateException("Item with item code: %s has been deactivated. Requisition cannot proceed"
+                throw new InvalidStateException("Item with code: %s has been deactivated. Requisition cannot proceed"
                     .formatted(line.getSnapShotItemCode())
                 );
             }
