@@ -3,7 +3,6 @@ package org.viators.argo.requisition;
 import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.NonNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -125,9 +124,13 @@ public class RequisitionService {
         RequisitionT requisition = loadResourceAndCheckStatusAndVersion(reqPublicId, request.version());
         UserT loggedInUser = userService.getUser(keycloakId);
 
-        if (isReqStateTransitionNotValid(requisition.getRequisitionState(), RequisitionStateEnum.APPROVED)) {
-            throw new InvalidStateException("Requisition with public Id: %s is in '%s' state and cannot transition to state 'APPROVED'"
-                .formatted(requisition.getPublicId(), requisition.getRequisitionState().name()));
+        RequisitionStateEnum targetState = loggedInUser.getLevel().equals(UserLevelEnum.LEVEL_5)
+            ? RequisitionStateEnum.APPROVED_BY_TMGM
+            : RequisitionStateEnum.APPROVED;
+
+        if (isReqStateTransitionNotValid(requisition.getRequisitionState(), targetState)) {
+            throw new InvalidStateException("Requisition with public Id: %s is in '%s' state and cannot transition to state '%s'"
+                .formatted(requisition.getPublicId(), requisition.getRequisitionState().name(), targetState.name()));
         }
 
         validateApproverIsNotCreatorOrSubmitter(requisition, loggedInUser.getUsername());
@@ -136,8 +139,11 @@ public class RequisitionService {
         requisition.setApprovedBy(loggedInUser.getUsername());
         requisition.setApprovalRemarks(request.approvalRemarks());
 
-        RequisitionApprovalHistoryT requisitionApprovalHistory =
-            getRequisitionApprovalHistoryT(reqPublicId, request, loggedInUser, requisition);
+        RequisitionApprovalHistoryT requisitionApprovalHistory = validateAndBuildApprovalHistoryEntry(
+            reqPublicId, request, loggedInUser, requisition
+        );
+
+        requisition.setRequisitionState(targetState);
 
         requisition.addReqApprovalHistoryEntry(requisitionApprovalHistory);
 
@@ -162,6 +168,7 @@ public class RequisitionService {
         requisition.setRejectedAt(Instant.now());
         requisition.setRejectedBy(loggedInUser.getUsername());
         requisition.setRejectedReason(request.rejectedReason());
+        requisition.setRequisitionState(RequisitionStateEnum.REJECTED);
 
         return RequisitionDetailsResponse.from(requisitionRepository.save(requisition));
     }
@@ -269,7 +276,10 @@ public class RequisitionService {
                 toState.equals(RequisitionStateEnum.SUBMITTED) || toState.equals(RequisitionStateEnum.CANCELLED);
             case SUBMITTED ->
                 toState.equals(RequisitionStateEnum.REJECTED) || toState.equals(RequisitionStateEnum.APPROVED);
-            case APPROVED, REJECTED, CANCELLED -> false;
+            case APPROVED ->
+                toState.equals(RequisitionStateEnum.REJECTED) || toState.equals(RequisitionStateEnum.APPROVED) ||
+                    toState.equals(RequisitionStateEnum.APPROVED_BY_TMGM);
+            case APPROVED_BY_TMGM, REJECTED, CANCELLED -> false;
         };
     }
 
@@ -325,10 +335,10 @@ public class RequisitionService {
         }
     }
 
-    private RequisitionApprovalHistoryT getRequisitionApprovalHistoryT(String reqPublicId,
-                                                                       ApproveRequisitionRequest request,
-                                                                       UserT loggedInUser,
-                                                                       RequisitionT requisition) {
+    private RequisitionApprovalHistoryT validateAndBuildApprovalHistoryEntry(String reqPublicId,
+                                                                             ApproveRequisitionRequest request,
+                                                                             UserT loggedInUser,
+                                                                             RequisitionT requisition) {
 
         RequisitionApprovalHistoryT requisitionApprovalHistory = reqApprovalHistRepository
             .findTop1ByRequisition_PublicIdOrderByCreatedAtDesc(reqPublicId);
@@ -343,7 +353,7 @@ public class RequisitionService {
             int previousApproverLevel = requisitionApprovalHistory.getApproverLevelAtAction().getOrdinal();
             int currentUserApproverLevel = loggedInUser.getLevel().getOrdinal();
 
-            if (previousApproverLevel <= currentUserApproverLevel) {
+            if (previousApproverLevel >= currentUserApproverLevel) {
                 throw new BusinessValidationException("This requisition was created by a user of level %d. It requires an approver of level %d. Your level is %d"
                     .formatted(previousApproverLevel, previousApproverLevel + 1, currentUserApproverLevel));
             }

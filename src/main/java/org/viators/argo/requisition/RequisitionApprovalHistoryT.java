@@ -27,6 +27,6 @@ public class RequisitionApprovalHistoryT extends BaseEntity {
     @Column(name = "approver_level_at_action", nullable = false, updatable = false)
     private UserLevelEnum approverLevelAtAction;
 
-    @Column(name = "remarks", length = 400)
+    @Column(name = "remarks", length = 500)
     private String remarks;
 }
