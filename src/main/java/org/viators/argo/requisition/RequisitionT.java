@@ -91,6 +91,10 @@ public class RequisitionT extends BaseEntity {
     @Builder.Default
     private Set<RequisitionLineT> lines = new HashSet<>();
 
+    @OneToMany(mappedBy = "requisition", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<RequisitionApprovalHistoryT> approvalHistory = new HashSet<>();
+
     @Formula("select count(rl.id) from requisition_lines rl where rl.requisition_id = id")
     @Setter(AccessLevel.NONE)
     private Integer numberOfLines;
@@ -99,4 +103,10 @@ public class RequisitionT extends BaseEntity {
         lines.add(reqLine);
         reqLine.setRequisition(this);
     }
+
+    public void addReqApprovalHistoryEntry(RequisitionApprovalHistoryT approval) {
+        approvalHistory.add(approval);
+        approval.setRequisition(this);
+    }
+
 }
