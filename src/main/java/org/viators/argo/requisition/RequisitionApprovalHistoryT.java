@@ -5,6 +5,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.viators.argo.common.entity.BaseEntity;
 import org.viators.argo.person.PersonT;
+import org.viators.argo.requisition.enums.RequisitionStateEnum;
 import org.viators.argo.user.UserLevelEnum;
 
 @Entity
@@ -23,6 +24,9 @@ public class RequisitionApprovalHistoryT extends BaseEntity {
 
     @Column(name = "approver_username", nullable = false, updatable = false)
     private String approverUsername;
+
+    @Column(name = "action", nullable = false, updatable = false)
+    private RequisitionStateEnum requisitionState;
 
     @Column(name = "approver_level_at_action", nullable = false, updatable = false)
     private UserLevelEnum approverLevelAtAction;
