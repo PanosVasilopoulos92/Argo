@@ -62,7 +62,6 @@ public class RequisitionController {
         return ResponseEntity.ok(response);
     }
 
-
     @PreAuthorize("hasAnyRole('PROCUREMENT_MANAGER'. 'PROCUREMENT_APPROVER')")
     @PatchMapping("/{reqPublicId}/reject")
     public ResponseEntity<RequisitionDetailsResponse> rejectRequisition(
@@ -77,7 +76,7 @@ public class RequisitionController {
     }
 
     @PreAuthorize("hasAnyRole('PROCUREMENT_CLERK', 'PROCUREMENT_MANAGER')")
-    @PatchMapping("/{reqPublicId/cancel}")
+    @PatchMapping("/{reqPublicId}/cancel}")
     public ResponseEntity<Void> cancelDraftRequisition(
         @CurrentKeycloakId String keycloakId,
         @PathVariable String reqPublicId,

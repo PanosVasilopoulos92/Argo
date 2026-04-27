@@ -3,6 +3,7 @@ package org.viators.argo.requisition;
 import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -25,6 +26,7 @@ import org.viators.argo.requisition.enums.RequisitionStateEnum;
 import org.viators.argo.requisition.enums.RequisitionTypeEnum;
 import org.viators.argo.requisition.sequence.RequisitionSequenceRepository;
 import org.viators.argo.requisition.sequence.RequisitionSequenceT;
+import org.viators.argo.user.UserLevelEnum;
 import org.viators.argo.user.UserService;
 import org.viators.argo.user.UserT;
 import org.viators.argo.vessel.VesselQueryService;
@@ -44,6 +46,7 @@ public class RequisitionService {
     private final VesselQueryService vesselQueryService;
     private final ItemQueryService itemQueryService;
     private final RequisitionSequenceRepository requisitionSequenceRepository;
+    private final RequisitionApprovalHistRepository reqApprovalHistRepository;
     private final UserService userService;
     private final PersonQueryService personQueryService;
 
@@ -133,6 +136,11 @@ public class RequisitionService {
         requisition.setApprovedBy(loggedInUser.getUsername());
         requisition.setApprovalRemarks(request.approvalRemarks());
 
+        RequisitionApprovalHistoryT requisitionApprovalHistory =
+            getRequisitionApprovalHistoryT(reqPublicId, request, loggedInUser, requisition);
+
+        requisition.addReqApprovalHistoryEntry(requisitionApprovalHistory);
+
         return RequisitionDetailsResponse.from(requisitionRepository.save(requisition));
     }
 
@@ -175,7 +183,7 @@ public class RequisitionService {
         requisition.setCancelledBy(loggedInUser.getUsername());
 
         requisition.getLines()
-                .forEach(line -> line.setStatus(ResourceStatusEnum.INACTIVE));
+            .forEach(line -> line.setStatus(ResourceStatusEnum.INACTIVE));
 
         requisitionRepository.save(requisition);
     }
@@ -315,5 +323,36 @@ public class RequisitionService {
                     " Requisition cannot proceed");
             }
         }
+    }
+
+    private RequisitionApprovalHistoryT getRequisitionApprovalHistoryT(String reqPublicId,
+                                                                       ApproveRequisitionRequest request,
+                                                                       UserT loggedInUser,
+                                                                       RequisitionT requisition) {
+
+        RequisitionApprovalHistoryT requisitionApprovalHistory = reqApprovalHistRepository
+            .findTop1ByRequisition_PublicIdOrderByCreatedAtDesc(reqPublicId);
+
+        if (requisitionApprovalHistory != null) {
+
+            if (UserLevelEnum.LEVEL_5.equals(requisitionApprovalHistory.getApproverLevelAtAction())) {
+                throw new InvalidStateException("Requisition with public Id: %s has already been approved by a level 5 approver"
+                    .formatted(reqPublicId));
+            }
+
+            int previousApproverLevel = requisitionApprovalHistory.getApproverLevelAtAction().getOrdinal();
+            int currentUserApproverLevel = loggedInUser.getLevel().getOrdinal();
+
+            if (previousApproverLevel <= currentUserApproverLevel) {
+                throw new BusinessValidationException("This requisition was created by a user of level %d. It requires an approver of level %d. Your level is %d"
+                    .formatted(previousApproverLevel, previousApproverLevel + 1, currentUserApproverLevel));
+            }
+        }
+
+        requisitionApprovalHistory = new RequisitionApprovalHistoryT(
+            requisition, loggedInUser.getUsername(), loggedInUser.getLevel(), request.approvalRemarks()
+        );
+
+        return requisitionApprovalHistory;
     }
 }

@@ -44,7 +44,7 @@ public class UserT extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "level", nullable = false)
-    private UserLevelEnum userLevel;
+    private UserLevelEnum level;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "person_id", referencedColumnName = "id", updatable = false)
