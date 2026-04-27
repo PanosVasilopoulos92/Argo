@@ -124,8 +124,12 @@ public class RequisitionService {
         RequisitionT requisition = loadResourceAndCheckStatusAndVersion(reqPublicId, request.version());
         UserT loggedInUser = userService.getUser(keycloakId);
 
+        if (loggedInUser.getLevel().equals(UserLevelEnum.LEVEL_1)) {
+            throw new BusinessValidationException("Users with level 1 are not able to approve any requisition");
+        }
+
         RequisitionStateEnum targetState = loggedInUser.getLevel().equals(UserLevelEnum.LEVEL_5)
-            ? RequisitionStateEnum.APPROVED_BY_TMGM
+            ? RequisitionStateEnum.FINALIZED
             : RequisitionStateEnum.APPROVED;
 
         if (isReqStateTransitionNotValid(requisition.getRequisitionState(), targetState)) {
@@ -135,16 +139,14 @@ public class RequisitionService {
 
         validateApproverIsNotCreatorOrSubmitter(requisition, loggedInUser.getUsername());
 
+        RequisitionApprovalHistoryT requisitionApprovalHistory = validateAndBuildApprovalHistoryEntry(
+            reqPublicId, request, loggedInUser, targetState , requisition
+        );
+
         requisition.setApprovedAt(Instant.now());
         requisition.setApprovedBy(loggedInUser.getUsername());
         requisition.setApprovalRemarks(request.approvalRemarks());
-
-        RequisitionApprovalHistoryT requisitionApprovalHistory = validateAndBuildApprovalHistoryEntry(
-            reqPublicId, request, loggedInUser, requisition
-        );
-
         requisition.setRequisitionState(targetState);
-
         requisition.addReqApprovalHistoryEntry(requisitionApprovalHistory);
 
         return RequisitionDetailsResponse.from(requisitionRepository.save(requisition));
@@ -165,10 +167,23 @@ public class RequisitionService {
 
         validateApproverIsNotCreatorOrSubmitter(requisition, loggedInUser.getUsername());
 
+        RequisitionApprovalHistoryT requisitionApprovalHistory = reqApprovalHistRepository
+            .findTop1ByRequisition_PublicIdOrderByCreatedAtDesc(reqPublicId);
+
+        if (requisitionApprovalHistory.getApproverLevelAtAction().getOrdinal() >= loggedInUser.getLevel().getOrdinal()) {
+            throw new BusinessValidationException("You cannot reject a requisition that has been approved from a user " +
+                "with higher level than yours");
+        }
+
+        RequisitionApprovalHistoryT requisitionApprovalHistoryToInsert = new RequisitionApprovalHistoryT(
+            requisition, loggedInUser.getUsername(), RequisitionStateEnum.REJECTED , loggedInUser.getLevel(), request.rejectedReason()
+        );
+
         requisition.setRejectedAt(Instant.now());
         requisition.setRejectedBy(loggedInUser.getUsername());
         requisition.setRejectedReason(request.rejectedReason());
         requisition.setRequisitionState(RequisitionStateEnum.REJECTED);
+        requisition.addReqApprovalHistoryEntry(requisitionApprovalHistoryToInsert);
 
         return RequisitionDetailsResponse.from(requisitionRepository.save(requisition));
     }
@@ -278,8 +293,8 @@ public class RequisitionService {
                 toState.equals(RequisitionStateEnum.REJECTED) || toState.equals(RequisitionStateEnum.APPROVED);
             case APPROVED ->
                 toState.equals(RequisitionStateEnum.REJECTED) || toState.equals(RequisitionStateEnum.APPROVED) ||
-                    toState.equals(RequisitionStateEnum.APPROVED_BY_TMGM);
-            case APPROVED_BY_TMGM, REJECTED, CANCELLED -> false;
+                    toState.equals(RequisitionStateEnum.FINALIZED);
+            case FINALIZED, REJECTED, CANCELLED -> false;
         };
     }
 
@@ -338,17 +353,13 @@ public class RequisitionService {
     private RequisitionApprovalHistoryT validateAndBuildApprovalHistoryEntry(String reqPublicId,
                                                                              ApproveRequisitionRequest request,
                                                                              UserT loggedInUser,
+                                                                             RequisitionStateEnum action,
                                                                              RequisitionT requisition) {
 
         RequisitionApprovalHistoryT requisitionApprovalHistory = reqApprovalHistRepository
             .findTop1ByRequisition_PublicIdOrderByCreatedAtDesc(reqPublicId);
 
         if (requisitionApprovalHistory != null) {
-
-            if (UserLevelEnum.LEVEL_5.equals(requisitionApprovalHistory.getApproverLevelAtAction())) {
-                throw new InvalidStateException("Requisition with public Id: %s has already been approved by a level 5 approver"
-                    .formatted(reqPublicId));
-            }
 
             int previousApproverLevel = requisitionApprovalHistory.getApproverLevelAtAction().getOrdinal();
             int currentUserApproverLevel = loggedInUser.getLevel().getOrdinal();
@@ -360,7 +371,7 @@ public class RequisitionService {
         }
 
         requisitionApprovalHistory = new RequisitionApprovalHistoryT(
-            requisition, loggedInUser.getUsername(), loggedInUser.getLevel(), request.approvalRemarks()
+            requisition, loggedInUser.getUsername(), action, loggedInUser.getLevel(), request.approvalRemarks()
         );
 
         return requisitionApprovalHistory;
