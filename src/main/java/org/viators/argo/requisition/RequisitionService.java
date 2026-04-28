@@ -140,7 +140,7 @@ public class RequisitionService {
         validateApproverIsNotCreatorOrSubmitter(requisition, loggedInUser.getUsername());
 
         RequisitionApprovalHistoryT requisitionApprovalHistory = validateAndBuildApprovalHistoryEntry(
-            reqPublicId, request, loggedInUser, targetState , requisition
+            reqPublicId, request, loggedInUser, targetState, requisition
         );
 
         requisition.setApprovedAt(Instant.now());
@@ -170,13 +170,14 @@ public class RequisitionService {
         RequisitionApprovalHistoryT requisitionApprovalHistory = reqApprovalHistRepository
             .findTop1ByRequisition_PublicIdOrderByCreatedAtDesc(reqPublicId);
 
-        if (requisitionApprovalHistory.getApproverLevelAtAction().getOrdinal() >= loggedInUser.getLevel().getOrdinal()) {
+        if (requisitionApprovalHistory != null &&
+            requisitionApprovalHistory.getApproverLevelAtAction().getOrdinal() >= loggedInUser.getLevel().getOrdinal()) {
             throw new BusinessValidationException("You cannot reject a requisition that has been approved from a user " +
                 "with higher level than yours");
         }
 
         RequisitionApprovalHistoryT requisitionApprovalHistoryToInsert = new RequisitionApprovalHistoryT(
-            requisition, loggedInUser.getUsername(), RequisitionStateEnum.REJECTED , loggedInUser.getLevel(), request.rejectedReason()
+            requisition, loggedInUser.getUsername(), RequisitionStateEnum.REJECTED, loggedInUser.getLevel(), request.rejectedReason()
         );
 
         requisition.setRejectedAt(Instant.now());
@@ -264,7 +265,7 @@ public class RequisitionService {
         );
 
         String finalReqNumberFormat = ("REQ-" + nextSequenceForCurrentYear.getYear())
-            .concat("-" + String.format("06%d", nextSequenceForCurrentYear.getLastValue()));
+            .concat("-" + String.format("%06d", nextSequenceForCurrentYear.getLastValue()));
 
         nextSequenceForCurrentYear.setFinalFormattedValue(finalReqNumberFormat);
 
@@ -365,7 +366,7 @@ public class RequisitionService {
             int currentUserApproverLevel = loggedInUser.getLevel().getOrdinal();
 
             if (previousApproverLevel >= currentUserApproverLevel) {
-                throw new BusinessValidationException("This requisition was created by a user of level %d. It requires an approver of level %d. Your level is %d"
+                throw new BusinessValidationException("This requisition was approved by a user of level %d. It requires an approver of level %d. Your level is %d"
                     .formatted(previousApproverLevel, previousApproverLevel + 1, currentUserApproverLevel));
             }
         }
