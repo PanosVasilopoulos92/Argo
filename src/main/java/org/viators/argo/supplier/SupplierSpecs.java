@@ -7,7 +7,7 @@ public class SupplierSpecs {
 
     public static Specification<SupplierT> hasCompNameContaining(String companyNameContaining) {
         return (root, query, cb) ->
-            cb.like(cb.lower(root.get("companyName")), companyNameContaining.toLowerCase());
+            cb.like(cb.lower(root.get("companyName")), "%" + companyNameContaining.toLowerCase() + "%");
     }
 
     public static Specification<SupplierT> hasVatNumber(String vatNumber) {

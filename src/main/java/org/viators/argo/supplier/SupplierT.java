@@ -7,8 +7,6 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.viators.argo.common.entity.BaseEntity;
 
-import java.util.Set;
-
 @Entity
 @Table(name = "suppliers")
 @Setter
@@ -23,7 +21,7 @@ public class SupplierT extends BaseEntity {
     private String companyName;
 
     @Column(name = "contact_person", nullable = false, length = 150)
-    private String contactPersons;
+    private String contactPerson;
 
     @Column(name = "email", nullable = false, unique = true)
     private String email;

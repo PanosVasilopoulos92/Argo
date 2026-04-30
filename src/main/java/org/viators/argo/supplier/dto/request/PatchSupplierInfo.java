@@ -26,7 +26,7 @@ public class PatchSupplierInfo {
 
     @NotBlank(message = "Contact person cannot be blank")
     @Size(min = 3, max = 150, message = "Contact person must be between 3-150 characters long")
-    private JsonNullable<String> contactPersons = JsonNullable.undefined();
+    private JsonNullable<String> contactPerson = JsonNullable.undefined();
 
     @NotBlank(message = "Email cannot be blank")
     @Email(message = "Email must be a valid email address")
@@ -47,7 +47,7 @@ public class PatchSupplierInfo {
 
     public void update(SupplierT entity) {
         applyIfPresent(companyName, entity::setCompanyName);
-        applyIfPresent(contactPersons, entity::setContactPersons);
+        applyIfPresent(contactPerson, entity::setContactPerson);
         applyIfPresent(email, entity::setEmail);
         applyIfPresent(phone, entity::setPhone);
         applyIfPresent(address, entity::setAddress);
