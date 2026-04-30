@@ -105,6 +105,19 @@ public class SupplierService {
             .map(SupplierSummaryResponse::from);
     }
 
+    @Transactional(readOnly = true)
+    public SupplierT getActiveResource(String supPublicId) {
+        SupplierT supplier = supplierRepository.findByPublicId(supPublicId)
+            .orElseThrow(() -> new ResourceNotFoundException("Supplier", "publicId", supPublicId));
+
+        if (supplier.getStatus().equals(ResourceStatusEnum.INACTIVE)) {
+            throw new InvalidStateException("Supplier with public Id: %s is inactive"
+                .formatted(supPublicId));
+        }
+
+        return supplier;
+    }
+
     // Private helper methods
     private void validateUniquenessOfEmailAndVatNumberOnCreate(String supEmail, String supVatNumber) {
         if (supplierRepository.existsByEmail(supEmail)) {

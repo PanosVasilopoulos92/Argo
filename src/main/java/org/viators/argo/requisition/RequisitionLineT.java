@@ -10,6 +10,7 @@ import org.viators.argo.item.enums.UnitOfMeasurementEnum;
 import org.viators.argo.quotation.QuotationT;
 
 import java.math.BigDecimal;
+import java.util.HashSet;
 import java.util.Set;
 
 @Entity
@@ -57,5 +58,6 @@ public class RequisitionLineT extends BaseEntity {
     private RequisitionT requisition;
 
     @OneToMany(mappedBy = "line", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<QuotationT> quotations;
+    private Set<QuotationT> quotations = new HashSet<>();
+
 }
