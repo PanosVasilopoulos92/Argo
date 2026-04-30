@@ -24,7 +24,7 @@ public class SupplierController {
 
     private final SupplierService supplierService;
 
-    @GetMapping("/filter")
+    @GetMapping("/filtered")
     public ResponseEntity<Page<SupplierSummaryResponse>> getFiltered(
         @ModelAttribute SearchSupplierFiltersRequest filters,
         @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
@@ -41,12 +41,14 @@ public class SupplierController {
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("hasRole('PROCUREMENT_MANAGER')")
     @PatchMapping("/{supplierPublicId}/deactivate")
     public ResponseEntity<Void> deactivateSupplier(@PathVariable String supplierPublicId) {
         supplierService.deactivateSupplier(supplierPublicId);
         return ResponseEntity.noContent().build();
     }
 
+    @PreAuthorize("hasRole('PROCUREMENT_MANAGER')")
     @PatchMapping("/{supplierPublicId}/reactivate")
     public ResponseEntity<Void> reactivateSupplier(@PathVariable String supplierPublicId) {
         supplierService.reactivateSupplier(supplierPublicId);
