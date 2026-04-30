@@ -8,7 +8,7 @@ import java.time.Instant;
 public record SupplierDetailsResponse(
     String publicId,
     String companyName,
-    String contactPersons,
+    String contactPerson,
     String email,
     String phone,
     String address,
@@ -23,7 +23,7 @@ public record SupplierDetailsResponse(
         return new SupplierDetailsResponse(
             entity.getPublicId(),
             entity.getCompanyName(),
-            entity.getContactPersons(),
+            entity.getContactPerson(),
             entity.getEmail(),
             entity.getPhone(),
             entity.getAddress(),
