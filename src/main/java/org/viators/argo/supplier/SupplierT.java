@@ -1,11 +1,12 @@
 package org.viators.argo.supplier;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.viators.argo.common.entity.BaseEntity;
+import org.viators.argo.quotation.QuotationT;
+
+import java.util.Set;
 
 @Entity
 @Table(name = "suppliers")
@@ -34,4 +35,7 @@ public class SupplierT extends BaseEntity {
 
     @Column(name = "vat_number", nullable = false, unique = true, length = 50)
     private String vatNumber;
+
+    @OneToMany(mappedBy = "supplier", fetch = FetchType.LAZY)
+    private Set<QuotationT> quotations;
 }

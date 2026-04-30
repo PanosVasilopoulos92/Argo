@@ -7,8 +7,10 @@ import org.viators.argo.common.entity.BaseEntity;
 import org.viators.argo.item.ItemT;
 import org.viators.argo.item.enums.ItemCategoryEnum;
 import org.viators.argo.item.enums.UnitOfMeasurementEnum;
+import org.viators.argo.quotation.QuotationT;
 
 import java.math.BigDecimal;
+import java.util.Set;
 
 @Entity
 @Table(name = "requisition_lines")
@@ -53,4 +55,7 @@ public class RequisitionLineT extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "requisition_id", referencedColumnName = "id", nullable = false, updatable = false)
     private RequisitionT requisition;
+
+    @OneToMany(mappedBy = "line", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<QuotationT> quotations;
 }
