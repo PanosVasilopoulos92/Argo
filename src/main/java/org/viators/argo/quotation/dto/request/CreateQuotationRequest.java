@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public record CreateQuotationRequest(
+
     @NotBlank(message = "Requisition line public Id is required")
     String requisitionLinePublicId,
 

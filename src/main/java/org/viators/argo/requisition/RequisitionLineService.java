@@ -10,7 +10,10 @@ import org.viators.argo.common.exceptions.InvalidStateException;
 import org.viators.argo.common.exceptions.ResourceNotFoundException;
 import org.viators.argo.requisition.enums.RequisitionStateEnum;
 
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -23,11 +26,29 @@ public class RequisitionLineService {
     public RequisitionLineT getLineAndValidateStatusAndStateForQuotation(String reqLinePublicId) {
         RequisitionLineT requisitionLine = requisitionLineRepository.findByPublicId(reqLinePublicId)
             .orElseThrow(() -> new ResourceNotFoundException("Requisition Line", "publicId", reqLinePublicId));
-        RequisitionT requisition = requisitionLine.getRequisition();
 
+        RequisitionT requisition = requisitionLine.getRequisition();
+        validateStatusAndStateForQuotation(requisitionLine, requisition);
+
+        return requisitionLine;
+    }
+
+    public List<RequisitionLineT> getLinesAndValidateForQuotation(Set<String> publicIds) {
+        List<RequisitionLineT> reqLines = requisitionLineRepository.findByPublicIdIn(publicIds);
+
+        validateLinesCorrespondToSameRequisition(reqLines);
+        reqLines.forEach(requisitionLineT ->
+            validateStatusAndStateForQuotation(requisitionLineT, requisitionLineT.getRequisition())
+        );
+
+        return reqLines;
+    }
+
+    // Private helper methods
+    private static void validateStatusAndStateForQuotation(RequisitionLineT requisitionLine, RequisitionT requisition) {
         if (requisitionLine.getStatus().equals(ResourceStatusEnum.INACTIVE)) {
             throw new InvalidStateException("Requisition line with public Id: %s is inactive"
-                .formatted(requisitionLine));
+                .formatted(requisitionLine.getPublicId()));
         }
 
         if (!Objects.equals(requisition.getRequisitionState(), RequisitionStateEnum.FINALIZED)) {
@@ -36,7 +57,17 @@ public class RequisitionLineService {
                     .formatted(requisitionLine.getPublicId(), requisition.getRequisitionState().name())
             );
         }
+    }
 
-        return requisitionLine;
+    private void validateLinesCorrespondToSameRequisition(List<RequisitionLineT> reqLines) {
+        Set<String> requisitionPublicIds = reqLines.stream()
+            .map(RequisitionLineT::getRequisition)
+            .map(RequisitionT::getPublicId)
+            .collect(Collectors.toSet());
+
+        if (requisitionPublicIds.size() > 1) {
+            throw new BusinessValidationException("Found requisition lines that correspond to different requisitions." +
+                "Please check lines again and retry");
+        }
     }
 }
