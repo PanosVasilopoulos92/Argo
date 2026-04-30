@@ -6,6 +6,7 @@ import lombok.experimental.SuperBuilder;
 import org.viators.argo.common.entity.BaseEntity;
 import org.viators.argo.quotation.QuotationT;
 
+import java.util.HashSet;
 import java.util.Set;
 
 @Entity
@@ -37,5 +38,6 @@ public class SupplierT extends BaseEntity {
     private String vatNumber;
 
     @OneToMany(mappedBy = "supplier", fetch = FetchType.LAZY)
-    private Set<QuotationT> quotations;
+    private Set<QuotationT> quotations = new HashSet<>();
+
 }
