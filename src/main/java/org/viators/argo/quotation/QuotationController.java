@@ -26,7 +26,7 @@ public class QuotationController {
 
     private final QuotationService quotationService;
 
-    @PreAuthorize("hasAnyRole('PROCUREMENT_CLERK ', 'PROCUREMENT_MANAGER')")
+    @PreAuthorize("hasAnyRole('PROCUREMENT_CLERK', 'PROCUREMENT_MANAGER')")
     @PostMapping
     public ResponseEntity<QuotationDetailsResponse> create(
         @Valid @RequestBody CreateQuotationRequest request
@@ -37,7 +37,7 @@ public class QuotationController {
             .body(response);
     }
 
-    @PreAuthorize("hasAnyRole('PROCUREMENT_CLERK ', 'PROCUREMENT_MANAGER')")
+    @PreAuthorize("hasAnyRole('PROCUREMENT_CLERK', 'PROCUREMENT_MANAGER')")
     @PostMapping("/bulk")
     public ResponseEntity<List<QuotationDetailsResponse>> createBulk(
         @Valid @RequestBody BulkCreateQuotationsRequest request
@@ -46,7 +46,7 @@ public class QuotationController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PreAuthorize("hasAnyRole('PROCUREMENT_CLERK ', 'PROCUREMENT_MANAGER')")
+    @PreAuthorize("hasAnyRole('PROCUREMENT_CLERK', 'PROCUREMENT_MANAGER')")
     @PatchMapping("/{publicId}/accept")
     public ResponseEntity<Void> acceptQuotation(
         @CurrentKeycloakId String keycloakId,
@@ -57,7 +57,7 @@ public class QuotationController {
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("hasAnyRole('PROCUREMENT_CLERK ', 'PROCUREMENT_MANAGER')")
+    @PreAuthorize("hasAnyRole('PROCUREMENT_CLERK', 'PROCUREMENT_MANAGER')")
     @PatchMapping("/{publicId}/reject")
     public ResponseEntity<Void> rejectQuotation(
         @CurrentKeycloakId String keycloakId,

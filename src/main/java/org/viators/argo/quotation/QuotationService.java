@@ -1,5 +1,6 @@
 package org.viators.argo.quotation;
 
+import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -27,6 +28,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -130,11 +132,15 @@ public class QuotationService {
         }
 
         if (StringUtils.hasText(request.requisitionPublicId())) {
-            specs = specs.and(QuotationSpecs.hasRequisitionPublicId(request.quotationPublicId()));
+            specs = specs.and(QuotationSpecs.hasRequisitionPublicId(request.requisitionPublicId()));
         }
 
         if (request.quotationState() != null) {
             specs = specs.and(QuotationSpecs.hasState(request.quotationState()));
+        }
+
+        if (request.excludeExpired()) {
+            specs = specs.and(QuotationSpecs.hasNotExpired());
         }
 
         specs = specs.and(QuotationSpecs.hasValidDateRange(request.validUntilFrom(), request.validUntilTo()));
@@ -167,7 +173,12 @@ public class QuotationService {
             .orElseThrow(() -> new ResourceNotFoundException("Quotation", "publicId", quotPublicId));
 
         if (ResourceStatusEnum.INACTIVE.equals(quotation.getStatus())) {
-            throw new InvalidStateException("Quotation with publicId: %s is inactive. Action cannot proceed");
+            throw new InvalidStateException("Quotation with publicId: %s is inactive. Action cannot proceed"
+                .formatted(quotPublicId));
+        }
+
+        if (!Objects.equals(quotation.getVersion(), requestVersion)) {
+            throw new OptimisticLockException("Another user has concurrently modified the same resource. Please try again");
         }
 
         return quotation;

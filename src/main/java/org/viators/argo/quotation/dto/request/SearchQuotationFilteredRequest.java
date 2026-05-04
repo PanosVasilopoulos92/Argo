@@ -9,6 +9,7 @@ public record SearchQuotationFilteredRequest(
     String requisitionPublicId,
     QuotationStateEnum quotationState,
     LocalDate validUntilFrom,
-    LocalDate validUntilTo
+    LocalDate validUntilTo,
+    boolean excludeExpired
 ) {
 }
