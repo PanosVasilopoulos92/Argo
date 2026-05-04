@@ -13,7 +13,7 @@ public record CreateSupplierRequest(
 
     @NotBlank(message = "Contact person is required")
     @Size(min = 3, max = 150, message = "Contact person must be between 3-150 characters long")
-    String contactPersons,
+    String contactPerson,
 
     @NotBlank(message = "Email is required")
     @Email(message = "Email must be a valid email address")
@@ -37,7 +37,7 @@ public record CreateSupplierRequest(
     public SupplierT toEntity() {
         return SupplierT.builder()
             .companyName(companyName)
-            .contactPersons(contactPersons)
+            .contactPerson(contactPerson)
             .email(email)
             .phone(phone)
             .address(address)
