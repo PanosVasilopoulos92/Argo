@@ -11,9 +11,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.viators.argo.quotation.dto.request.BulkCreateQuotationsRequest;
-import org.viators.argo.quotation.dto.request.CreateQuotationRequest;
-import org.viators.argo.quotation.dto.request.SearchQuotationFilteredRequest;
+import org.viators.argo.config.CurrentKeycloakId;
+import org.viators.argo.quotation.dto.request.*;
 import org.viators.argo.quotation.dto.response.QuotationDetailsResponse;
 import org.viators.argo.quotation.dto.response.QuotationSummaryResponse;
 
@@ -45,6 +44,28 @@ public class QuotationController {
     ) {
         List<QuotationDetailsResponse> response = quotationService.createBulk(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PreAuthorize("hasAnyRole('PROCUREMENT_CLERK ', 'PROCUREMENT_MANAGER')")
+    @PatchMapping("/{publicId}/accept")
+    public ResponseEntity<Void> acceptQuotation(
+        @CurrentKeycloakId String keycloakId,
+        @PathVariable String publicId,
+        @Valid @RequestBody AcceptQuotationRequest request
+    ) {
+        quotationService.acceptQuotation(keycloakId, publicId, request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize("hasAnyRole('PROCUREMENT_CLERK ', 'PROCUREMENT_MANAGER')")
+    @PatchMapping("/{publicId}/reject")
+    public ResponseEntity<Void> rejectQuotation(
+        @CurrentKeycloakId String keycloakId,
+        @PathVariable String publicId,
+        @Valid @RequestBody RejectQuotationRequest request
+    ) {
+        quotationService.rejectQuotation(keycloakId, publicId, request);
+        return ResponseEntity.noContent().build();
     }
 
     @PreAuthorize("hasAnyRole('PROCUREMENT_CLERK', 'PROCUREMENT_MANAGER')")
