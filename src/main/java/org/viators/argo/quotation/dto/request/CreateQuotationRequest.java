@@ -1,11 +1,6 @@
 package org.viators.argo.quotation.dto.request;
 
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Future;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import org.viators.argo.common.enums.CurrencyEnum;
 import org.viators.argo.quotation.QuotationT;
 import org.viators.argo.requisition.RequisitionLineT;
@@ -34,7 +29,7 @@ public record CreateQuotationRequest(
     BigDecimal quotedQuantity,
 
     @NotNull(message = "Valid until date is required")
-    @Future(message = "Valid until date must be in the future")
+    @FutureOrPresent(message = "Valid until date must be in the future")
     LocalDate validUntil,
 
     @Size(max = 500, message = "Notes must be at most 500 characters long")
