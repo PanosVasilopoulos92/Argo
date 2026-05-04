@@ -14,7 +14,7 @@ public class QuotationSpecs {
 
     public static Specification<QuotationT> hasRequisitionPublicId(String reqPublicId) {
         return (root, query, cb) ->
-            cb.equal(root.get("requisition").get("publicId"), reqPublicId);
+            cb.equal(root.get("line").get("requisition").get("publicId"), reqPublicId);
     }
 
     public static Specification<QuotationT> hasState(QuotationStateEnum state) {
@@ -36,5 +36,10 @@ public class QuotationSpecs {
 
             return cb.conjunction();
         };
+    }
+
+    public static Specification<QuotationT> hasNotExpired() {
+        return (root, query, cb) ->
+            cb.greaterThanOrEqualTo(root.get("validUntil"), LocalDate.now());
     }
 }
