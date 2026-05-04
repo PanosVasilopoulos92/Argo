@@ -8,18 +8,23 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.viators.argo.common.enums.ResourceStatusEnum;
 import org.viators.argo.common.exceptions.BusinessValidationException;
+import org.viators.argo.common.exceptions.InvalidStateException;
 import org.viators.argo.common.exceptions.ResourceNotFoundException;
-import org.viators.argo.quotation.dto.request.BulkCreateQuotationsRequest;
-import org.viators.argo.quotation.dto.request.CreateQuotationRequest;
-import org.viators.argo.quotation.dto.request.SearchQuotationFilteredRequest;
+import org.viators.argo.quotation.dto.request.*;
 import org.viators.argo.quotation.dto.response.QuotationDetailsResponse;
 import org.viators.argo.quotation.dto.response.QuotationSummaryResponse;
+import org.viators.argo.quotation.enums.QuotationStateEnum;
 import org.viators.argo.requisition.RequisitionLineService;
 import org.viators.argo.requisition.RequisitionLineT;
 import org.viators.argo.supplier.SupplierService;
 import org.viators.argo.supplier.SupplierT;
+import org.viators.argo.user.UserService;
+import org.viators.argo.user.UserT;
 
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -33,6 +38,7 @@ public class QuotationService {
     private final QuotationRepository quotationRepository;
     private final RequisitionLineService requisitionLineService;
     private final SupplierService supplierService;
+    private final UserService userService;
 
     @Transactional
     public QuotationDetailsResponse create(CreateQuotationRequest request) {
@@ -65,6 +71,33 @@ public class QuotationService {
             .toList();
     }
 
+    @Transactional
+    public void acceptQuotation(String keycloakId, String quotPublicId, AcceptQuotationRequest request) {
+        QuotationT quotation = loadSourceAndValidateStatusAndVersion(quotPublicId, request.version());
+        UserT loggedInUser = userService.getUser(keycloakId);
+        validateQuotationStateForAcceptance(quotation);
+
+        quotation.setAcceptedAt(Instant.now());
+        quotation.setAcceptedBy(loggedInUser.getUsername());
+        quotation.setQuotationState(QuotationStateEnum.ACCEPTED);
+    }
+
+    @Transactional
+    public void rejectQuotation(String keycloakId, String quotPublicId, RejectQuotationRequest request) {
+        QuotationT quotation = loadSourceAndValidateStatusAndVersion(quotPublicId, request.version());
+        UserT loggedInUser = userService.getUser(keycloakId);
+
+        if (!QuotationStateEnum.RECEIVED.equals(quotation.getQuotationState())) {
+            throw new InvalidStateException("Quotation with publicId: %s is in state '%s'. Only quotations in state '%s' can be rejected."
+                .formatted(quotation.getPublicId(), quotation.getQuotationState(), QuotationStateEnum.RECEIVED.name()));
+        }
+
+        quotation.setRejectedAt(Instant.now());
+        quotation.setRejectedBy(loggedInUser.getUsername());
+        quotation.setRejectionReason(request.rejectionReason());
+    }
+
+    // Read only methods
     @Transactional(readOnly = true)
     public QuotationDetailsResponse getQuotation(String publicId) {
         QuotationT quotation = quotationRepository.findByPublicId(publicId)
@@ -127,6 +160,35 @@ public class QuotationService {
         }
 
         return uniqueLineIds;
+    }
+
+    private QuotationT loadSourceAndValidateStatusAndVersion(String quotPublicId, Long requestVersion) {
+        QuotationT quotation = quotationRepository.findByPublicId(quotPublicId)
+            .orElseThrow(() -> new ResourceNotFoundException("Quotation", "publicId", quotPublicId));
+
+        if (ResourceStatusEnum.INACTIVE.equals(quotation.getStatus())) {
+            throw new InvalidStateException("Quotation with publicId: %s is inactive. Action cannot proceed");
+        }
+
+        return quotation;
+    }
+
+    private void validateQuotationStateForAcceptance(QuotationT quotation) {
+        if (!QuotationStateEnum.RECEIVED.equals(quotation.getQuotationState())) {
+            throw new InvalidStateException("Quotation with publicId: %s is in state '%s'. Only quotations in state '%s' can be accepted."
+                .formatted(quotation.getPublicId(), quotation.getQuotationState(), QuotationStateEnum.RECEIVED.name()));
+        }
+
+        if (quotation.getSupplier().getStatus().equals(ResourceStatusEnum.INACTIVE)) {
+            throw new InvalidStateException("Quotation cannot proceed because supplier(publicId: %s) is inactive"
+                .formatted(quotation.getSupplier().getPublicId()));
+        }
+
+        if (quotation.getValidUntil().isBefore(LocalDate.now())) {
+            throw new BusinessValidationException(("Quotation cannot proceed because is not valid any more." +
+                " Expired at %s so a request re-quote or reject it.")
+                .formatted(quotation.getValidUntil().toString()));
+        }
     }
 
 }

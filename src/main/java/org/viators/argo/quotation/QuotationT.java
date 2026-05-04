@@ -55,7 +55,7 @@ public class QuotationT extends BaseEntity {
     @Column(name = "rejected_by")
     private String rejectedBy;
 
-    @Column(name = "rejection_reason")
+    @Column(name = "rejection_reason", length = 400)
     private String rejectionReason;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
