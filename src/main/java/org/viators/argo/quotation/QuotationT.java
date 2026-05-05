@@ -5,6 +5,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.viators.argo.common.entity.BaseEntity;
 import org.viators.argo.common.enums.CurrencyEnum;
+import org.viators.argo.purchaseorder.PurchaseOrderLineT;
 import org.viators.argo.quotation.enums.QuotationStateEnum;
 import org.viators.argo.requisition.RequisitionLineT;
 import org.viators.argo.supplier.SupplierT;
@@ -63,4 +64,7 @@ public class QuotationT extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     private SupplierT supplier;
+
+    @OneToOne(mappedBy = "quotation")
+    private PurchaseOrderLineT purchaseOrderLine;
 }
