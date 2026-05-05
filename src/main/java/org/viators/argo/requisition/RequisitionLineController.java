@@ -20,7 +20,7 @@ public class RequisitionLineController {
     private final RequisitionLineRepository requisitionLineRepository;
     private final QuotationService quotationService;
 
-    @GetMapping("/{linePublicId/quotations}")
+    @GetMapping("/{linePublicId}/quotations")
     public ResponseEntity<List<QuotationSummaryResponse>> getQuotationsForLine(
         @PathVariable String linePublicId
     ) {
