@@ -6,10 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.viators.argo.config.CurrentKeycloakId;
-import org.viators.argo.purchaseorder.dto.request.AckPOFromSupplierRequest;
-import org.viators.argo.purchaseorder.dto.request.ClosePORequest;
-import org.viators.argo.purchaseorder.dto.request.CreatePORequest;
-import org.viators.argo.purchaseorder.dto.request.SendPOToSupplierRequest;
+import org.viators.argo.purchaseorder.dto.request.*;
 import org.viators.argo.purchaseorder.dto.response.PODetailsResponse;
 
 import java.net.URI;
@@ -58,5 +55,15 @@ public class PurchaseOrderController {
         @Valid @RequestBody ClosePORequest request
     ) {
         return ResponseEntity.ok(purchaseOrderService.closePO(keycloakId, poPublicId, request));
+    }
+
+    @PreAuthorize("hasAnyRole('PROCUREMENT_CLERK', 'PROCUREMENT_MANAGER')")
+    @PatchMapping("/{poPublicId}/cancel")
+    public ResponseEntity<PODetailsResponse> cancelPO(
+        @CurrentKeycloakId String keycloakId,
+        @PathVariable String poPublicId,
+        @Valid @RequestBody CancelPORequest request
+    ) {
+        return ResponseEntity.ok(purchaseOrderService.cancelPO(keycloakId, poPublicId, request));
     }
 }

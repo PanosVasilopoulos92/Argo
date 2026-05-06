@@ -99,6 +99,15 @@ public class QuotationService {
         quotation.setRejectionReason(request.rejectionReason());
     }
 
+    @Transactional
+    public void releaseQuotationsFromPOLines(Set<Long> quotationIds) {
+        List<QuotationT> quotations = quotationRepository.findByIdIn(quotationIds);
+
+        quotations.forEach(
+            q -> q.setPurchaseOrderLine(null)
+        );
+    }
+
     // Read only methods
     @Transactional(readOnly = true)
     public QuotationDetailsResponse getQuotation(String publicId) {

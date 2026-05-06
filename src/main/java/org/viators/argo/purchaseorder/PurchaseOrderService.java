@@ -12,10 +12,7 @@ import org.viators.argo.common.exceptions.BusinessValidationException;
 import org.viators.argo.common.exceptions.InvalidStateException;
 import org.viators.argo.common.exceptions.ResourceNotFoundException;
 import org.viators.argo.item.ItemT;
-import org.viators.argo.purchaseorder.dto.request.AckPOFromSupplierRequest;
-import org.viators.argo.purchaseorder.dto.request.ClosePORequest;
-import org.viators.argo.purchaseorder.dto.request.CreatePORequest;
-import org.viators.argo.purchaseorder.dto.request.SendPOToSupplierRequest;
+import org.viators.argo.purchaseorder.dto.request.*;
 import org.viators.argo.purchaseorder.dto.response.PODetailsResponse;
 import org.viators.argo.purchaseorder.dto.response.POLineSummaryResponse;
 import org.viators.argo.purchaseorder.enums.PurchaseOrderStateEnum;
@@ -201,6 +198,41 @@ public class PurchaseOrderService {
         purchaseOrder.setClosedAt(Instant.now());
         purchaseOrder.setClosedBy(loggedInUser.getUsername());
         purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.CLOSED);
+        purchaseOrder = purchaseOrderRepository.save(purchaseOrder);
+
+        List<POLineSummaryResponse> poLines = purchaseOrder.getPoLines()
+            .stream()
+            .map(POLineSummaryResponse::from)
+            .toList();
+
+        return PODetailsResponse.from(purchaseOrder, poLines);
+    }
+
+    @Transactional
+    public PODetailsResponse cancelPO(String keycloakId, String poPublicId, CancelPORequest request) {
+        UserT loggedInUser = userService.getUser(keycloakId);
+        PurchaseOrderT purchaseOrder = loadResourceAndValidateVersion(poPublicId, request.version());
+
+        if (purchaseOrder.getPurchaseOrderState() != PurchaseOrderStateEnum.DRAFT &&
+            purchaseOrder.getPurchaseOrderState() != PurchaseOrderStateEnum.SENT) {
+            throw new InvalidStateException("Only POs in state 'DRAFT' and 'SENT' can be cancelled. PO with publicId: %s is in state '%s'"
+                .formatted(poPublicId, purchaseOrder.getPurchaseOrderState().name()));
+        }
+
+        Set<Long> quotationToBeReleased = purchaseOrder.getPoLines().stream()
+            .map(PurchaseOrderLineT::getQuotation)
+            .map(QuotationT::getId)
+            .collect(Collectors.toSet());
+
+        quotationService.releaseQuotationsFromPOLines(quotationToBeReleased);
+        purchaseOrder.getPoLines().forEach(poLine ->
+            poLine.setQuotation(null)
+        );
+
+        purchaseOrder.setCancelledAt(Instant.now());
+        purchaseOrder.setCancelledBy(loggedInUser.getUsername());
+        purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.CANCELLED);
+        purchaseOrderRepository.save(purchaseOrder);
 
         List<POLineSummaryResponse> poLines = purchaseOrder.getPoLines()
             .stream()
