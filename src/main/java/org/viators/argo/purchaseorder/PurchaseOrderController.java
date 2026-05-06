@@ -7,6 +7,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.viators.argo.config.CurrentKeycloakId;
 import org.viators.argo.purchaseorder.dto.request.AckPOFromSupplierRequest;
+import org.viators.argo.purchaseorder.dto.request.ClosePORequest;
 import org.viators.argo.purchaseorder.dto.request.CreatePORequest;
 import org.viators.argo.purchaseorder.dto.request.SendPOToSupplierRequest;
 import org.viators.argo.purchaseorder.dto.response.PODetailsResponse;
@@ -47,5 +48,15 @@ public class PurchaseOrderController {
         @Valid @RequestBody AckPOFromSupplierRequest request
     ) {
         return ResponseEntity.ok(purchaseOrderService.acknowledgePOFromSupplier(keycloakId, poPublicId, request));
+    }
+
+    @PreAuthorize("hasAnyRole('PROCUREMENT_CLERK', 'PROCUREMENT_MANAGER')")
+    @PatchMapping("/{poPublicId}/close")
+    public ResponseEntity<PODetailsResponse> closePO(
+        @CurrentKeycloakId String keycloakId,
+        @PathVariable String poPublicId,
+        @Valid @RequestBody ClosePORequest request
+    ) {
+        return ResponseEntity.ok(purchaseOrderService.closePO(keycloakId, poPublicId, request));
     }
 }
