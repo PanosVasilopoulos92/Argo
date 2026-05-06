@@ -1,5 +1,6 @@
 package org.viators.argo.purchaseorder;
 
+import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -12,8 +13,10 @@ import org.viators.argo.common.exceptions.InvalidStateException;
 import org.viators.argo.common.exceptions.ResourceNotFoundException;
 import org.viators.argo.item.ItemT;
 import org.viators.argo.purchaseorder.dto.request.CreatePORequest;
+import org.viators.argo.purchaseorder.dto.request.SendPOToSupplierRequest;
 import org.viators.argo.purchaseorder.dto.response.PODetailsResponse;
 import org.viators.argo.purchaseorder.dto.response.POLineSummaryResponse;
+import org.viators.argo.purchaseorder.enums.PurchaseOrderStateEnum;
 import org.viators.argo.purchaseorder.enums.PurchaseOrderTypeEnum;
 import org.viators.argo.purchaseorder.sequence.PurchaseOrderSequenceRepository;
 import org.viators.argo.purchaseorder.sequence.PurchaseOrderSequenceT;
@@ -29,10 +32,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -123,6 +123,23 @@ public class PurchaseOrderService {
 
         log.info("PO with publicId {} has been created at {}. Contains {} lines and has total value of {}",
             purchaseOrder.getPublicId(), Instant.now(), poLines.size(), poTotalAmount);
+        return PODetailsResponse.from(purchaseOrder, poLines);
+    }
+
+    @Transactional
+    public PODetailsResponse sendPOToSupplier(String poPublicId, SendPOToSupplierRequest request) {
+        PurchaseOrderT purchaseOrder = loadResourceAndValidateStateAndVersion(poPublicId, request.version());
+
+        purchaseOrder.setSentAt(Instant.now());
+        purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.SENT);
+
+        purchaseOrder = purchaseOrderRepository.save(purchaseOrder);
+
+        List<POLineSummaryResponse> poLines = purchaseOrder.getPoLines()
+            .stream()
+            .map(POLineSummaryResponse::from)
+            .toList();
+
         return PODetailsResponse.from(purchaseOrder, poLines);
     }
 
@@ -268,5 +285,21 @@ public class PurchaseOrderService {
         }
 
         return currenciesFound.stream().findFirst().orElseThrow();
+    }
+
+    private PurchaseOrderT loadResourceAndValidateStateAndVersion(String poPublicId, Long providedVersion) {
+        PurchaseOrderT purchaseOrder = purchaseOrderRepository.findByPublicId(poPublicId)
+            .orElseThrow(() -> new ResourceNotFoundException("Purchase order", "publicId", poPublicId));
+
+        if (purchaseOrder.getPurchaseOrderState() != PurchaseOrderStateEnum.DRAFT) {
+            throw new InvalidStateException("Only POs in state 'DRAFT' can be sent. PO with publicId: %s is in state '%s'"
+                .formatted(poPublicId, purchaseOrder.getPurchaseOrderState().name()));
+        }
+
+        if (!Objects.equals(purchaseOrder.getVersion(), providedVersion)) {
+            throw new OptimisticLockException("Another user has concurrently modified same resource. Please try again");
+        }
+
+        return purchaseOrder;
     }
 }

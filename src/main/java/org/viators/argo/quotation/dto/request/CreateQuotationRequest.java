@@ -43,7 +43,7 @@ public record CreateQuotationRequest(
             .quotedQuantity(quotedQuantity)
             .validUntil(validUntil)
             .notes(notes)
-            .line(line)
+            .reqLine(line)
             .supplier(supplier)
             .build();
     }
