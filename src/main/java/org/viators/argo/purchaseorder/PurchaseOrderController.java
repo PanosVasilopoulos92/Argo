@@ -5,6 +5,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.viators.argo.config.CurrentKeycloakId;
+import org.viators.argo.purchaseorder.dto.request.AckPOFromSupplierRequest;
 import org.viators.argo.purchaseorder.dto.request.CreatePORequest;
 import org.viators.argo.purchaseorder.dto.request.SendPOToSupplierRequest;
 import org.viators.argo.purchaseorder.dto.response.PODetailsResponse;
@@ -35,5 +37,15 @@ public class PurchaseOrderController {
         @Valid @RequestBody SendPOToSupplierRequest request
     ) {
         return ResponseEntity.ok(purchaseOrderService.sendPOToSupplier(poPublicId, request));
+    }
+
+    @PreAuthorize("hasAnyRole('PROCUREMENT_CLERK', 'PROCUREMENT_MANAGER')")
+    @PatchMapping("/{poPublicId}/acknowledge")
+    public ResponseEntity<PODetailsResponse> acknowledgePOFromSupplier(
+        @CurrentKeycloakId String keycloakId,
+        @PathVariable String poPublicId,
+        @Valid @RequestBody AckPOFromSupplierRequest request
+    ) {
+        return ResponseEntity.ok(purchaseOrderService.acknowledgePOFromSupplier(keycloakId, poPublicId, request));
     }
 }

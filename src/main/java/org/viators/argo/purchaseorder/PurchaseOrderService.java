@@ -12,6 +12,7 @@ import org.viators.argo.common.exceptions.BusinessValidationException;
 import org.viators.argo.common.exceptions.InvalidStateException;
 import org.viators.argo.common.exceptions.ResourceNotFoundException;
 import org.viators.argo.item.ItemT;
+import org.viators.argo.purchaseorder.dto.request.AckPOFromSupplierRequest;
 import org.viators.argo.purchaseorder.dto.request.CreatePORequest;
 import org.viators.argo.purchaseorder.dto.request.SendPOToSupplierRequest;
 import org.viators.argo.purchaseorder.dto.response.PODetailsResponse;
@@ -27,6 +28,8 @@ import org.viators.argo.requisition.RequisitionLineService;
 import org.viators.argo.requisition.RequisitionLineT;
 import org.viators.argo.requisition.RequisitionT;
 import org.viators.argo.supplier.SupplierT;
+import org.viators.argo.user.UserService;
+import org.viators.argo.user.UserT;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -44,6 +47,7 @@ public class PurchaseOrderService {
     private final RequisitionLineService requisitionLineService;
     private final PurchaseOrderRepository purchaseOrderRepository;
     private final PurchaseOrderSequenceRepository purchaseOrderSequenceRepository;
+    private final UserService userService;
 
     private final String LOW_THRESHOLD = "500.00";
     private final String HIGH_THRESHOLD = "10000.00";
@@ -128,10 +132,39 @@ public class PurchaseOrderService {
 
     @Transactional
     public PODetailsResponse sendPOToSupplier(String poPublicId, SendPOToSupplierRequest request) {
-        PurchaseOrderT purchaseOrder = loadResourceAndValidateStateAndVersion(poPublicId, request.version());
+        PurchaseOrderT purchaseOrder = loadResourceAndValidateVersion(poPublicId, request.version());
+
+        if (purchaseOrder.getPurchaseOrderState() != PurchaseOrderStateEnum.DRAFT) {
+            throw new InvalidStateException("Only POs in state 'DRAFT' can be sent. PO with publicId: %s is in state '%s'"
+                .formatted(poPublicId, purchaseOrder.getPurchaseOrderState().name()));
+        }
 
         purchaseOrder.setSentAt(Instant.now());
         purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.SENT);
+
+        purchaseOrder = purchaseOrderRepository.save(purchaseOrder);
+
+        List<POLineSummaryResponse> poLines = purchaseOrder.getPoLines()
+            .stream()
+            .map(POLineSummaryResponse::from)
+            .toList();
+
+        return PODetailsResponse.from(purchaseOrder, poLines);
+    }
+
+    @Transactional
+    public PODetailsResponse acknowledgePOFromSupplier(String keycloakId, String poPublicId, AckPOFromSupplierRequest request) {
+        UserT loggedInUser = userService.getUser(keycloakId);
+        PurchaseOrderT purchaseOrder = loadResourceAndValidateVersion(poPublicId, request.version());
+
+        if (purchaseOrder.getPurchaseOrderState() != PurchaseOrderStateEnum.SENT) {
+            throw new InvalidStateException("Only POs in state 'SENT' can be acknowledged by supplier. PO with publicId: %s is in state '%s'"
+                .formatted(poPublicId, purchaseOrder.getPurchaseOrderState().name()));
+        }
+
+        purchaseOrder.setAcknowledgedAt(Instant.now());
+        purchaseOrder.setAcknowledgedBy(loggedInUser.getUsername());
+        purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.ACKNOWLEDGED);
 
         purchaseOrder = purchaseOrderRepository.save(purchaseOrder);
 
@@ -287,14 +320,9 @@ public class PurchaseOrderService {
         return currenciesFound.stream().findFirst().orElseThrow();
     }
 
-    private PurchaseOrderT loadResourceAndValidateStateAndVersion(String poPublicId, Long providedVersion) {
+    private PurchaseOrderT loadResourceAndValidateVersion(String poPublicId, Long providedVersion) {
         PurchaseOrderT purchaseOrder = purchaseOrderRepository.findByPublicId(poPublicId)
             .orElseThrow(() -> new ResourceNotFoundException("Purchase order", "publicId", poPublicId));
-
-        if (purchaseOrder.getPurchaseOrderState() != PurchaseOrderStateEnum.DRAFT) {
-            throw new InvalidStateException("Only POs in state 'DRAFT' can be sent. PO with publicId: %s is in state '%s'"
-                .formatted(poPublicId, purchaseOrder.getPurchaseOrderState().name()));
-        }
 
         if (!Objects.equals(purchaseOrder.getVersion(), providedVersion)) {
             throw new OptimisticLockException("Another user has concurrently modified same resource. Please try again");
