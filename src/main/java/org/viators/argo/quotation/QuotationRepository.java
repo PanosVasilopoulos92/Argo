@@ -31,9 +31,18 @@ public interface QuotationRepository extends JpaRepository<QuotationT, Long>, Jp
 
     @Query("""
         select q from QuotationT q
-        where q.line.publicId = :linePublicId
+        where q.reqLine.publicId = :linePublicId
         order by q.quotationState
         """)
     @EntityGraph(attributePaths = {"line", "supplier"})
-    List<QuotationT> findAllQuotationsForLine(@Param("linePublicId") String linePublicId);
+    List<QuotationT> findAllQuotationsForReqLine(@Param("linePublicId") String linePublicId);
+
+    @Query("""
+           select q from QuotationT q
+           left join fetch q.supplier s
+           left join fetch q.reqLine rl
+           left join fetch rl.quotations rlq
+           where q.publicId in :quotationPublicIds
+           """)
+    Set<QuotationT> findQuotationsForPO(Set<String> quotationPublicIds);
 }

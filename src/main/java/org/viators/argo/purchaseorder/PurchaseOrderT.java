@@ -12,6 +12,8 @@ import org.viators.argo.supplier.SupplierT;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "purchase_orders")
@@ -30,6 +32,9 @@ public class PurchaseOrderT extends BaseEntity {
     @Column(name = "order_type", nullable = false, updatable = false)
     @Builder.Default
     private PurchaseOrderTypeEnum purchaseOrderType = PurchaseOrderTypeEnum.STANDARD;
+
+    @Column(name = "justification_notes", length = 500)
+    private String justificationNotes;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "order_state", nullable = false)
@@ -77,4 +82,16 @@ public class PurchaseOrderT extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "requisition_id", referencedColumnName = "id", nullable = false)
     private RequisitionT requisition;
+
+    @OneToMany(mappedBy = "purchaseOrder", fetch = FetchType.LAZY, cascade = {CascadeType.MERGE, CascadeType.PERSIST})
+    @Builder.Default
+    private Set<PurchaseOrderLineT> poLines = new HashSet<>();
+
+    // Helper methods
+    public void addPOLine(PurchaseOrderLineT poLine) {
+        if (poLine != null) {
+            this.poLines.add(poLine);
+            poLine.setPurchaseOrder(this);
+        }
+    }
 }

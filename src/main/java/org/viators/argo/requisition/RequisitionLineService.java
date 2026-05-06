@@ -33,6 +33,7 @@ public class RequisitionLineService {
         return requisitionLine;
     }
 
+    @Transactional(readOnly = true)
     public List<RequisitionLineT> getLinesAndValidateForQuotation(Set<String> publicIds) {
         List<RequisitionLineT> reqLines = requisitionLineRepository.findByPublicIdIn(publicIds);
 
@@ -44,15 +45,21 @@ public class RequisitionLineService {
         return reqLines;
     }
 
+    @Transactional(readOnly = true)
+    public RequisitionLineT getReqLine(String reqLinePublicId) {
+        return requisitionLineRepository.findByPublicId(reqLinePublicId)
+            .orElseThrow(() -> new ResourceNotFoundException("Requisition Line", "publicId", reqLinePublicId));
+    }
+
     // Private helper methods
     private static void validateStatusAndStateForQuotation(RequisitionLineT requisitionLine, RequisitionT requisition) {
-        if (requisitionLine.getStatus().equals(ResourceStatusEnum.INACTIVE)) {
+        if (requisitionLine.getStatus() == ResourceStatusEnum.INACTIVE) {
             throw new InvalidStateException("Requisition line with public Id: %s is inactive"
                 .formatted(requisitionLine.getPublicId()));
         }
 
-        if (!Objects.equals(requisition.getRequisitionState(), RequisitionStateEnum.FINALIZED)) {
-            throw new BusinessValidationException("Only lines that correspond to requisitions with state 'FINALIZED' can proceed to quotations." +
+        if (requisition.getRequisitionState() != RequisitionStateEnum.FINALIZED) {
+            throw new BusinessValidationException("Only lines that correspond to requisitions with state 'FINALIZED' can proceed." +
                 "Line with publicId: %s belongs to a requisition with state '%s'"
                     .formatted(requisitionLine.getPublicId(), requisition.getRequisitionState().name())
             );

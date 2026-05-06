@@ -13,10 +13,10 @@ import java.util.Optional;
 @Repository
 public interface RequisitionLineRepository extends JpaRepository<RequisitionLineT, Long> {
 
-    @EntityGraph(attributePaths = {"requisition"})
+    @EntityGraph(attributePaths = {"requisition", "catalogItem"})
     Optional<RequisitionLineT> findByPublicId(String publicId);
 
-    @EntityGraph(attributePaths = {"requisition"})
+    @EntityGraph(attributePaths = {"requisition", "catalogItem"})
     List<RequisitionLineT> findByPublicIdIn(Collection<String> publicIds);
 
     @Query("""
