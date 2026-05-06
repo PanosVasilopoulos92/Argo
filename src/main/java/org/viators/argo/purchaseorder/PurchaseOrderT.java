@@ -57,7 +57,7 @@ public class PurchaseOrderT extends BaseEntity {
     @Column(name = "acknowledged_by")
     private String acknowledgedBy;
 
-    @Column(name = "supplier_ack_reference")
+    @Column(name = "supplier_ack_reference", length = 100)
     private String supplierAckReference;
 
     @Column(name = "closed_at")
