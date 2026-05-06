@@ -61,8 +61,15 @@ public class PurchaseOrderLineT extends BaseEntity {
     @JoinColumn(name = "purchase_order_id", referencedColumnName = "id", nullable = false)
     private PurchaseOrderT purchaseOrder;
 
-
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "requisition_line_id", referencedColumnName = "id", nullable = false)
     private RequisitionLineT requisitionLine;
+
+    // Helper methods
+    public void addQuotation(QuotationT quotation) {
+        if (quotation != null) {
+            this.quotation = quotation;
+            quotation.setPurchaseOrderLine(this);
+        }
+    }
 }

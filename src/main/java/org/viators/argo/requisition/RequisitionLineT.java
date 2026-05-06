@@ -57,7 +57,7 @@ public class RequisitionLineT extends BaseEntity {
     @JoinColumn(name = "requisition_id", referencedColumnName = "id", nullable = false, updatable = false)
     private RequisitionT requisition;
 
-    @OneToMany(mappedBy = "line", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "reqLine", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<QuotationT> quotations = new HashSet<>();
 
 }

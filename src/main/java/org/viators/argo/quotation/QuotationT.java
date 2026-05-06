@@ -60,11 +60,16 @@ public class QuotationT extends BaseEntity {
     private String rejectionReason;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    private RequisitionLineT line;
+    private RequisitionLineT reqLine;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     private SupplierT supplier;
 
     @OneToOne(mappedBy = "quotation")
     private PurchaseOrderLineT purchaseOrderLine;
+
+    // Helper method
+    public boolean hasPOLine() {
+        return purchaseOrderLine != null;
+    }
 }

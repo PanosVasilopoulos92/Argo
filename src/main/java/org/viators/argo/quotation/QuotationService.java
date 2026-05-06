@@ -66,7 +66,7 @@ public class QuotationService {
             .map(lineQuotation -> {
                 RequisitionLineT requisitionLine = linesByPublicId.get(lineQuotation.requisitionLinePublicId());
                 QuotationT quotation = request.toEntity(supplier, lineQuotation);
-                quotation.setLine(requisitionLine);
+                quotation.setReqLine(requisitionLine);
                 return quotationRepository.save(quotation);
             })
             .map(QuotationDetailsResponse::from)
@@ -115,8 +115,13 @@ public class QuotationService {
     }
 
     @Transactional(readOnly = true)
-    public List<QuotationSummaryResponse> getQuotationsForLine(String linePublicId) {
-        return quotationRepository.findAllQuotationsForLine(linePublicId).stream()
+    public Set<QuotationT> getQuotationsForPO(Set<String> quotationPublicIds) {
+        return quotationRepository.findQuotationsForPO(quotationPublicIds);
+    }
+
+    @Transactional(readOnly = true)
+    public List<QuotationSummaryResponse> getQuotationsForReqLine(String reqLinePublicId) {
+        return quotationRepository.findAllQuotationsForReqLine(reqLinePublicId).stream()
             .map(QuotationSummaryResponse::from)
             .toList();
     }
