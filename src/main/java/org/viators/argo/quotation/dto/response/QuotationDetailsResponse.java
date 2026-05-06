@@ -33,7 +33,7 @@ public record QuotationDetailsResponse(
     public static QuotationDetailsResponse from(QuotationT entity) {
         return new QuotationDetailsResponse(
             entity.getPublicId(),
-            entity.getLine().getPublicId(),
+            entity.getReqLine().getPublicId(),
             entity.getSupplier().getPublicId(),
             entity.getUnitPrice(),
             entity.getCurrency(),
