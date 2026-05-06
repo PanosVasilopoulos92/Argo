@@ -13,6 +13,7 @@ import org.viators.argo.common.exceptions.InvalidStateException;
 import org.viators.argo.common.exceptions.ResourceNotFoundException;
 import org.viators.argo.item.ItemT;
 import org.viators.argo.purchaseorder.dto.request.AckPOFromSupplierRequest;
+import org.viators.argo.purchaseorder.dto.request.ClosePORequest;
 import org.viators.argo.purchaseorder.dto.request.CreatePORequest;
 import org.viators.argo.purchaseorder.dto.request.SendPOToSupplierRequest;
 import org.viators.argo.purchaseorder.dto.response.PODetailsResponse;
@@ -176,6 +177,39 @@ public class PurchaseOrderService {
         return PODetailsResponse.from(purchaseOrder, poLines);
     }
 
+    @Transactional
+    public PODetailsResponse closePO(String keycloakId, String poPublicId, ClosePORequest request) {
+        UserT loggedInUser = userService.getUser(keycloakId);
+        PurchaseOrderT purchaseOrder = loadResourceAndValidateVersion(poPublicId, request.version());
+
+        if (purchaseOrder.getPurchaseOrderState() != PurchaseOrderStateEnum.ACKNOWLEDGED) {
+            throw new InvalidStateException("Only POs in state 'ACKNOWLEDGED' can be closed/finilized. PO with publicId: %s is in state '%s'"
+                .formatted(poPublicId, purchaseOrder.getPurchaseOrderState().name()));
+        }
+
+        Set<String> poLinesWithoutPrice = purchaseOrder.getPoLines().stream()
+            .filter(line -> line.getUnitPrice() == null)
+            .map(PurchaseOrderLineT::getPublicId)
+            .collect(Collectors.toSet());
+
+        if (!poLinesWithoutPrice.isEmpty()) {
+            throw new BusinessValidationException("Found Purchase line(s) that have not yet set their price: %s"
+                .formatted(poLinesWithoutPrice) +
+                " PO cannot close");
+        }
+
+        purchaseOrder.setClosedAt(Instant.now());
+        purchaseOrder.setClosedBy(loggedInUser.getUsername());
+        purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.CLOSED);
+
+        List<POLineSummaryResponse> poLines = purchaseOrder.getPoLines()
+            .stream()
+            .map(POLineSummaryResponse::from)
+            .toList();
+
+        return PODetailsResponse.from(purchaseOrder, poLines);
+    }
+
     // Private helper methods
     private String generatePONumber() {
         int currentYear = LocalDate.now().getYear();
@@ -195,7 +229,9 @@ public class PurchaseOrderService {
         return nextVal.getFinalFormattedValue();
     }
 
-    private Map<String, RequisitionLineT> validateQuotationsAndRetrieveReqLines(Set<QuotationT> quotations, PurchaseOrderTypeEnum poType, String justificationNotes) {
+    private Map<String, RequisitionLineT> validateQuotationsAndRetrieveReqLines(Set<QuotationT> quotations,
+                                                                                PurchaseOrderTypeEnum poType,
+                                                                                String justificationNotes) {
 
         validateNumberOfQuotationsAgainstAmountAndPOType(quotations, poType, justificationNotes);
 
