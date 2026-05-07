@@ -2,12 +2,18 @@ package org.viators.argo.purchaseorder;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.SortDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.viators.argo.config.CurrentKeycloakId;
 import org.viators.argo.purchaseorder.dto.request.*;
 import org.viators.argo.purchaseorder.dto.response.PODetailsResponse;
+import org.viators.argo.purchaseorder.dto.response.POSummaryResponse;
 
 import java.net.URI;
 
@@ -17,6 +23,29 @@ import java.net.URI;
 public class PurchaseOrderController {
 
     private final PurchaseOrderService purchaseOrderService;
+
+    @GetMapping("/{poPublicId}")
+    public ResponseEntity<PODetailsResponse> getPO(
+        @PathVariable String poPublicId
+    ) {
+        return ResponseEntity.ok(
+            purchaseOrderService.getPO(poPublicId)
+        );
+    }
+
+    @GetMapping("/filter")
+    public ResponseEntity<Page<POSummaryResponse>> getPOsFiltered(
+        @ModelAttribute SearchPOFilteredRequest request,
+        @PageableDefault
+        @SortDefault.SortDefaults({
+            @SortDefault(sort = "createdAt", direction = Sort.Direction.DESC),
+            @SortDefault(sort = "supplier.companyName", direction = Sort.Direction.ASC)
+        }) Pageable pageable
+    ) {
+        return ResponseEntity.ok(
+            purchaseOrderService.getPOFiltered(request, pageable)
+        );
+    }
 
     @PreAuthorize("hasAnyRole('PROCUREMENT_CLERK', 'PROCUREMENT_MANAGER')")
     @PostMapping
@@ -34,7 +63,9 @@ public class PurchaseOrderController {
         @PathVariable String poPublicId,
         @Valid @RequestBody SendPOToSupplierRequest request
     ) {
-        return ResponseEntity.ok(purchaseOrderService.sendPOToSupplier(poPublicId, request));
+        return ResponseEntity.ok(
+            purchaseOrderService.sendPOToSupplier(poPublicId, request)
+        );
     }
 
     @PreAuthorize("hasAnyRole('PROCUREMENT_CLERK', 'PROCUREMENT_MANAGER')")
@@ -44,7 +75,9 @@ public class PurchaseOrderController {
         @PathVariable String poPublicId,
         @Valid @RequestBody AckPOFromSupplierRequest request
     ) {
-        return ResponseEntity.ok(purchaseOrderService.acknowledgePOFromSupplier(keycloakId, poPublicId, request));
+        return ResponseEntity.ok(
+            purchaseOrderService.acknowledgePOFromSupplier(keycloakId, poPublicId, request)
+        );
     }
 
     @PreAuthorize("hasAnyRole('PROCUREMENT_CLERK', 'PROCUREMENT_MANAGER')")
@@ -54,7 +87,9 @@ public class PurchaseOrderController {
         @PathVariable String poPublicId,
         @Valid @RequestBody ClosePORequest request
     ) {
-        return ResponseEntity.ok(purchaseOrderService.closePO(keycloakId, poPublicId, request));
+        return ResponseEntity.ok(
+            purchaseOrderService.closePO(keycloakId, poPublicId, request)
+        );
     }
 
     @PreAuthorize("hasAnyRole('PROCUREMENT_CLERK', 'PROCUREMENT_MANAGER')")
@@ -64,6 +99,8 @@ public class PurchaseOrderController {
         @PathVariable String poPublicId,
         @Valid @RequestBody CancelPORequest request
     ) {
-        return ResponseEntity.ok(purchaseOrderService.cancelPO(keycloakId, poPublicId, request));
+        return ResponseEntity.ok(
+            purchaseOrderService.cancelPO(keycloakId, poPublicId, request)
+        );
     }
 }

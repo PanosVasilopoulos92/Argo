@@ -3,6 +3,9 @@ package org.viators.argo.purchaseorder;
 import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -15,6 +18,7 @@ import org.viators.argo.item.ItemT;
 import org.viators.argo.purchaseorder.dto.request.*;
 import org.viators.argo.purchaseorder.dto.response.PODetailsResponse;
 import org.viators.argo.purchaseorder.dto.response.POLineSummaryResponse;
+import org.viators.argo.purchaseorder.dto.response.POSummaryResponse;
 import org.viators.argo.purchaseorder.enums.PurchaseOrderStateEnum;
 import org.viators.argo.purchaseorder.enums.PurchaseOrderTypeEnum;
 import org.viators.argo.purchaseorder.sequence.PurchaseOrderSequenceRepository;
@@ -240,6 +244,56 @@ public class PurchaseOrderService {
             .toList();
 
         return PODetailsResponse.from(purchaseOrder, poLines);
+    }
+
+    // Read only methods
+    @Transactional(readOnly = true)
+    public PODetailsResponse getPO(String poPublicId) {
+        PurchaseOrderT purchaseOrder = purchaseOrderRepository.findByPublicId(poPublicId)
+            .orElseThrow(() -> new ResourceNotFoundException("PO", "publicId", poPublicId));
+
+        List<POLineSummaryResponse> poLines = purchaseOrder.getPoLines().stream()
+            .map(POLineSummaryResponse::from)
+            .toList();
+
+        return PODetailsResponse.from(purchaseOrder, poLines);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<POSummaryResponse> getPOFiltered(SearchPOFilteredRequest request, Pageable pageable) {
+        Specification<PurchaseOrderT> specs = (root, query, cb) -> cb.conjunction();
+
+        if (StringUtils.hasText(request.purchaseOrderNumber())) {
+            specs = specs.and(POSpecs.hasPONumber(request.purchaseOrderNumber()));
+        }
+
+        if (StringUtils.hasText(request.supplierCompanyNameContaining())) {
+            specs = specs.and(POSpecs.hasSupplierCompanyNameContaining(
+                request.supplierCompanyNameContaining()
+            ));
+        }
+
+        if (StringUtils.hasText(request.sourceRequisitionPublicId())) {
+            specs = specs.and(POSpecs.hasReqPublicId(request.sourceRequisitionPublicId()));
+        }
+
+        if (request.purchaseOrderType() != null) {
+            specs = specs.and(POSpecs.hasPOType(request.purchaseOrderType()));
+        }
+
+        if (request.purchaseOrderState() != null) {
+            specs = specs.and(POSpecs.hasPOState(request.purchaseOrderState()));
+        }
+
+        if (request.currency() != null) {
+            specs = specs.and(POSpecs.hasCurrency(request.currency()));
+        }
+
+        specs = specs.and(POSpecs.hasSentDateRange(request.sentAtFrom(), request.sentAtTo()));
+        specs = specs.and(POSpecs.hasTotalAmountRange(request.totalAmountMin(), request.totalAmountMax()));
+
+        return purchaseOrderRepository.findAll(specs, pageable)
+            .map(POSummaryResponse::from);
     }
 
     // Private helper methods
