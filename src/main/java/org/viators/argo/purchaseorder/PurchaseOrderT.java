@@ -72,7 +72,7 @@ public class PurchaseOrderT extends BaseEntity {
     @Column(name = "cancelled_by")
     private String cancelledBy;
 
-    @Column(name = "cancellation_reason")
+    @Column(name = "cancellation_reason", length = 500)
     private String cancellationReason;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

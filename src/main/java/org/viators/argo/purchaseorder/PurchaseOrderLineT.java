@@ -54,7 +54,7 @@ public class PurchaseOrderLineT extends BaseEntity {
     private String snapshotManufacturer;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "quotation_id", referencedColumnName = "id", unique = true)
+    @JoinColumn(name = "quotation_id", referencedColumnName = "id")
     private QuotationT quotation;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
