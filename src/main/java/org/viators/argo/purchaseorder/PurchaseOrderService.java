@@ -136,6 +136,11 @@ public class PurchaseOrderService {
     public PODetailsResponse sendPOToSupplier(String poPublicId, SendPOToSupplierRequest request) {
         PurchaseOrderT purchaseOrder = loadResourceAndValidateVersion(poPublicId, request.version());
 
+        if (purchaseOrder.getSupplier().getStatus() == ResourceStatusEnum.INACTIVE) {
+            throw new BusinessValidationException("Supplier with publicId: %s is inactive. PO cannot proceed"
+                .formatted(purchaseOrder.getSupplier().getPublicId()));
+        }
+
         if (purchaseOrder.getPurchaseOrderState() != PurchaseOrderStateEnum.DRAFT) {
             throw new InvalidStateException("Only POs in state 'DRAFT' can be sent. PO with publicId: %s is in state '%s'"
                 .formatted(poPublicId, purchaseOrder.getPurchaseOrderState().name()));
@@ -167,6 +172,7 @@ public class PurchaseOrderService {
         purchaseOrder.setAcknowledgedAt(Instant.now());
         purchaseOrder.setAcknowledgedBy(loggedInUser.getUsername());
         purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.ACKNOWLEDGED);
+        purchaseOrder.setSupplierAckReference(request.supplierAckReference());
 
         purchaseOrder = purchaseOrderRepository.save(purchaseOrder);
 
@@ -229,13 +235,12 @@ public class PurchaseOrderService {
             .collect(Collectors.toSet());
 
         quotationService.releaseQuotationsFromPOLines(quotationToBeReleased);
-        purchaseOrder.getPoLines().forEach(poLine ->
-            poLine.setQuotation(null)
-        );
 
         purchaseOrder.setCancelledAt(Instant.now());
         purchaseOrder.setCancelledBy(loggedInUser.getUsername());
+        purchaseOrder.setCancellationReason(request.cancellationReason());
         purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.CANCELLED);
+
         purchaseOrderRepository.save(purchaseOrder);
 
         List<POLineSummaryResponse> poLines = purchaseOrder.getPoLines()
@@ -328,7 +333,7 @@ public class PurchaseOrderService {
             .toList();
 
         if (!expiredQuotations.isEmpty()) {
-            throw new InvalidStateException("The following quotations have been expired: %s. PO cannot proceed"
+            throw new BusinessValidationException("The following quotations have been expired: %s. PO cannot proceed"
                 .formatted(expiredQuotations));
         }
 
@@ -340,7 +345,7 @@ public class PurchaseOrderService {
 
         if (!quotationsInInvalidState.isEmpty()) {
             throw new BusinessValidationException("The following quotation(s) are not in 'ACCEPTED' state: %s. PO cannot proceed"
-                .formatted(quotations));
+                .formatted(quotationsInInvalidState));
         }
 
         List<String> quotationHasAlreadyPOLine = quotations.stream()
@@ -371,7 +376,7 @@ public class PurchaseOrderService {
             .orElseThrow();
 
         if (supplier.getStatus() == ResourceStatusEnum.INACTIVE) {
-            throw new InvalidStateException("Supplier with publicId: %s is inactive. PO cannot proceed"
+            throw new BusinessValidationException("Supplier with publicId: %s is inactive. PO cannot proceed"
                 .formatted(supplier.getPublicId()));
         }
 
