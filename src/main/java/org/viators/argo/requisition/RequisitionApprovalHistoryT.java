@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.viators.argo.common.entity.BaseEntity;
-import org.viators.argo.person.PersonT;
 import org.viators.argo.requisition.enums.RequisitionStateEnum;
 import org.viators.argo.user.UserLevelEnum;
 
