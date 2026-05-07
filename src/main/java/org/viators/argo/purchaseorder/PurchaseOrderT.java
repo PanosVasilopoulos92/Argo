@@ -5,6 +5,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.viators.argo.common.entity.BaseEntity;
 import org.viators.argo.common.enums.CurrencyEnum;
+import org.viators.argo.goodsreceipt.GoodsReceiptT;
 import org.viators.argo.purchaseorder.enums.PurchaseOrderStateEnum;
 import org.viators.argo.purchaseorder.enums.PurchaseOrderTypeEnum;
 import org.viators.argo.requisition.RequisitionT;
@@ -86,6 +87,9 @@ public class PurchaseOrderT extends BaseEntity {
     @OneToMany(mappedBy = "purchaseOrder", fetch = FetchType.LAZY, cascade = {CascadeType.MERGE, CascadeType.PERSIST})
     @Builder.Default
     private Set<PurchaseOrderLineT> poLines = new HashSet<>();
+
+    @OneToMany(mappedBy = "purchaseOrder")
+    private Set<GoodsReceiptT> goodsReceipts = new HashSet<>();
 
     // Helper methods
     public void addPOLine(PurchaseOrderLineT poLine) {
