@@ -33,7 +33,7 @@ public class PurchaseOrderController {
         );
     }
 
-    @GetMapping("/filter")
+    @GetMapping("/filtered")
     public ResponseEntity<Page<POSummaryResponse>> getPOsFiltered(
         @ModelAttribute SearchPOFilteredRequest request,
         @PageableDefault

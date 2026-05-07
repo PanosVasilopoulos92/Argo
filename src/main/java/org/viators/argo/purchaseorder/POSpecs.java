@@ -30,12 +30,12 @@ public class POSpecs {
 
     public static Specification<PurchaseOrderT> hasPOType(PurchaseOrderTypeEnum poType) {
         return (root, query, cb) ->
-            cb.equal(root.get("purchaseOrderState"), poType);
+            cb.equal(root.get("purchaseOrderType"), poType);
     }
 
     public static Specification<PurchaseOrderT> hasPOState(PurchaseOrderStateEnum poState) {
         return (root, query, cb) ->
-            cb.equal(root.get("purchaseOrderType"), poState);
+            cb.equal(root.get("purchaseOrderState"), poState);
     }
 
     public static Specification<PurchaseOrderT> hasCurrency(CurrencyEnum currency) {
