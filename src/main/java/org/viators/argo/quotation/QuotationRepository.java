@@ -46,7 +46,4 @@ public interface QuotationRepository extends JpaRepository<QuotationT, Long>, Jp
            where q.publicId in :quotationPublicIds
            """)
     Set<QuotationT> findQuotationsForPO(Set<String> quotationPublicIds);
-
-
-    List<QuotationT> findByIdIn(Set<Long> ids);
 }

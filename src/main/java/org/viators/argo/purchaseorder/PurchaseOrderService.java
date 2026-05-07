@@ -190,7 +190,7 @@ public class PurchaseOrderService {
         PurchaseOrderT purchaseOrder = loadResourceAndValidateVersion(poPublicId, request.version());
 
         if (purchaseOrder.getPurchaseOrderState() != PurchaseOrderStateEnum.ACKNOWLEDGED) {
-            throw new InvalidStateException("Only POs in state 'ACKNOWLEDGED' can be closed/finilized. PO with publicId: %s is in state '%s'"
+            throw new InvalidStateException("Only POs in state 'ACKNOWLEDGED' can be closed/finalized. PO with publicId: %s is in state '%s'"
                 .formatted(poPublicId, purchaseOrder.getPurchaseOrderState().name()));
         }
 
@@ -228,13 +228,6 @@ public class PurchaseOrderService {
             throw new InvalidStateException("Only POs in state 'DRAFT' and 'SENT' can be cancelled. PO with publicId: %s is in state '%s'"
                 .formatted(poPublicId, purchaseOrder.getPurchaseOrderState().name()));
         }
-
-        Set<Long> quotationToBeReleased = purchaseOrder.getPoLines().stream()
-            .map(PurchaseOrderLineT::getQuotation)
-            .map(QuotationT::getId)
-            .collect(Collectors.toSet());
-
-        quotationService.releaseQuotationsFromPOLines(quotationToBeReleased);
 
         purchaseOrder.setCancelledAt(Instant.now());
         purchaseOrder.setCancelledBy(loggedInUser.getUsername());
