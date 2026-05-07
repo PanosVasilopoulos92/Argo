@@ -295,7 +295,9 @@ public class RequisitionService {
             case APPROVED ->
                 toState.equals(RequisitionStateEnum.REJECTED) || toState.equals(RequisitionStateEnum.APPROVED) ||
                     toState.equals(RequisitionStateEnum.FINALIZED);
-            case FINALIZED, REJECTED, CANCELLED -> false;
+            case FINALIZED ->
+                toState == RequisitionStateEnum.FULFILLED;
+            case REJECTED, CANCELLED, FULFILLED -> false;
         };
     }
 
