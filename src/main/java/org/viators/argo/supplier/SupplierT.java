@@ -38,6 +38,7 @@ public class SupplierT extends BaseEntity {
     private String vatNumber;
 
     @OneToMany(mappedBy = "supplier", fetch = FetchType.LAZY)
+    @Builder.Default
     private Set<QuotationT> quotations = new HashSet<>();
 
 }

@@ -64,9 +64,11 @@ public class VesselT extends BaseEntity {
     private String portOfRegistry;
 
     @OneToMany(mappedBy = "vessel", fetch = FetchType.LAZY)
+    @Builder.Default
     private Set<VesselCertificateT> certificates = new HashSet<>();
 
     @OneToMany(mappedBy = "vessel", fetch = FetchType.LAZY)
+    @Builder.Default
     private Set<AssignmentT> assignments = new HashSet<>();
 
     // Helper methods

@@ -36,5 +36,6 @@ public class SeafarerT extends PersonT {
     private LocalDate sbExpiryDate;
 
     @OneToMany(mappedBy = "seafarer", fetch = FetchType.LAZY)
+    @Builder.Default
     private Set<AssignmentT> assignments = new HashSet<>();
 }
