@@ -3,7 +3,7 @@ package org.viators.argo.quotation.dto.request;
 import jakarta.validation.constraints.*;
 import org.viators.argo.common.enums.CurrencyEnum;
 import org.viators.argo.quotation.QuotationT;
-import org.viators.argo.requisition.RequisitionLineT;
+import org.viators.argo.requisition.line.RequisitionLineT;
 import org.viators.argo.supplier.SupplierT;
 
 import java.math.BigDecimal;

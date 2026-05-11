@@ -27,8 +27,8 @@ import org.viators.argo.purchaseorder.sequence.PurchaseOrderSequenceT;
 import org.viators.argo.quotation.QuotationService;
 import org.viators.argo.quotation.QuotationT;
 import org.viators.argo.quotation.enums.QuotationStateEnum;
-import org.viators.argo.requisition.RequisitionLineService;
-import org.viators.argo.requisition.RequisitionLineT;
+import org.viators.argo.requisition.line.RequisitionLineService;
+import org.viators.argo.requisition.line.RequisitionLineT;
 import org.viators.argo.requisition.RequisitionT;
 import org.viators.argo.supplier.SupplierT;
 import org.viators.argo.user.UserService;
@@ -190,8 +190,8 @@ public class PurchaseOrderService {
         UserT loggedInUser = userService.getUser(keycloakId);
         PurchaseOrderT purchaseOrder = loadResourceAndValidateVersion(poPublicId, request.version());
 
-        if (purchaseOrder.getPurchaseOrderState() != PurchaseOrderStateEnum.ACKNOWLEDGED) {
-            throw new InvalidStateException("Only POs in state 'ACKNOWLEDGED' can be closed/finalized. PO with publicId: %s is in state '%s'"
+        if (purchaseOrder.getPurchaseOrderState() != PurchaseOrderStateEnum.FULLY_RECEIVED) {
+            throw new InvalidStateException("Only POs in state 'FULLY RECEIVED' can be closed/finalized. PO with publicId: %s is in state '%s'"
                 .formatted(poPublicId, purchaseOrder.getPurchaseOrderState().name()));
         }
 
@@ -299,6 +299,19 @@ public class PurchaseOrderService {
     public PurchaseOrderT getActivePO(String poPublicId) {
         PurchaseOrderT purchaseOrder = purchaseOrderRepository.findByPublicId(poPublicId)
             .orElseThrow(() -> new ResourceNotFoundException("PO", "publicId", poPublicId));
+
+        if (purchaseOrder.getStatus() == ResourceStatusEnum.INACTIVE) {
+            throw new InvalidStateException("PO with publicId: %s is inactive"
+                .formatted(purchaseOrder.getPublicId()));
+        }
+
+        return purchaseOrder;
+    }
+
+    @Transactional(readOnly = true)
+    public PurchaseOrderT getActivePOByDatabaseId(Long databaseId) {
+        PurchaseOrderT purchaseOrder = purchaseOrderRepository.findById(databaseId)
+            .orElseThrow(() -> new ResourceNotFoundException("PO", "id", databaseId));
 
         if (purchaseOrder.getStatus() == ResourceStatusEnum.INACTIVE) {
             throw new InvalidStateException("PO with publicId: %s is inactive"

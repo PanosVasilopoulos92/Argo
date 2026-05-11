@@ -8,7 +8,7 @@ import org.viators.argo.common.enums.CurrencyEnum;
 import org.viators.argo.purchaseorder.line.PurchaseOrderLineT;
 import org.viators.argo.purchaseorder.enums.PurchaseOrderStateEnum;
 import org.viators.argo.quotation.enums.QuotationStateEnum;
-import org.viators.argo.requisition.RequisitionLineT;
+import org.viators.argo.requisition.line.RequisitionLineT;
 import org.viators.argo.supplier.SupplierT;
 
 import java.math.BigDecimal;

@@ -9,6 +9,7 @@ import org.viators.argo.person.PersonT;
 import org.viators.argo.requisition.enums.RequisitionPriorityEnum;
 import org.viators.argo.requisition.enums.RequisitionStateEnum;
 import org.viators.argo.requisition.enums.RequisitionTypeEnum;
+import org.viators.argo.requisition.line.RequisitionLineT;
 import org.viators.argo.vessel.VesselT;
 
 import java.time.Instant;
