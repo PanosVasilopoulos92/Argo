@@ -7,6 +7,7 @@ import org.viators.argo.common.entity.BaseEntity;
 import org.viators.argo.goodsreceipt.GoodsReceiptT;
 import org.viators.argo.goodsreceipt.enums.ReceiptLineFlagEnum;
 import org.viators.argo.goodsreceipt.enums.ReceivedGoodsConditionEnum;
+import org.viators.argo.purchaseorder.line.PurchaseOrderLineT;
 
 import java.math.BigDecimal;
 
@@ -25,7 +26,8 @@ public class GoodsReceiptLineT extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "received_goods_condition", nullable = false)
-    private ReceivedGoodsConditionEnum receivedGoodsCondition;
+    @Builder.Default
+    private ReceivedGoodsConditionEnum receivedGoodsCondition = ReceivedGoodsConditionEnum.OK;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "line_flag", nullable = false)
@@ -35,5 +37,10 @@ public class GoodsReceiptLineT extends BaseEntity {
     private String notes;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "receipt_id", referencedColumnName = "id", nullable = false, updatable = false)
     private GoodsReceiptT goodsReceipt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "po_line_id", referencedColumnName = "id", nullable = false, updatable = false)
+    private PurchaseOrderLineT poLine;
 }

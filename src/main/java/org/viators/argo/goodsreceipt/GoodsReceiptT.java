@@ -47,9 +47,18 @@ public class GoodsReceiptT extends BaseEntity {
     private String cancellationReason;
 
     @OneToMany(mappedBy = "goodsReceipt", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private Set<GoodsReceiptLineT> goodsReceiptLines = new HashSet<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "purchase_order_id", referencedColumnName = "id", nullable = false)
     private PurchaseOrderT purchaseOrder;
+
+    // Helper methods
+    public void addReceiptLine(GoodsReceiptLineT goodsReceiptLine) {
+        if (goodsReceiptLine != null) {
+            goodsReceiptLines.add(goodsReceiptLine);
+            goodsReceiptLine.setGoodsReceipt(this);
+        }
+    }
 }
