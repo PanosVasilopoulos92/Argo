@@ -9,7 +9,6 @@ import org.viators.argo.common.exceptions.InvalidStateException;
 import org.viators.argo.goodsreceipt.dto.request.CreateGoodsReceiptRequest;
 import org.viators.argo.goodsreceipt.dto.request.GoodsReceiptLinesRequest;
 import org.viators.argo.goodsreceipt.dto.response.GoodsReceiptDetailsResponse;
-import org.viators.argo.goodsreceipt.dto.response.GoodsReceiptLineDetailsResponse;
 import org.viators.argo.goodsreceipt.dto.response.GoodsReceiptLineSummaryResponse;
 import org.viators.argo.goodsreceipt.enums.ReceiptLineFlagEnum;
 import org.viators.argo.goodsreceipt.line.GoodsReceiptLineRepository;
@@ -21,6 +20,10 @@ import org.viators.argo.purchaseorder.PurchaseOrderT;
 import org.viators.argo.purchaseorder.enums.PurchaseOrderStateEnum;
 import org.viators.argo.purchaseorder.line.PurchaseOrderLineService;
 import org.viators.argo.purchaseorder.line.PurchaseOrderLineT;
+import org.viators.argo.requisition.RequisitionService;
+import org.viators.argo.requisition.RequisitionT;
+import org.viators.argo.requisition.enums.RequisitionStateEnum;
+import org.viators.argo.requisition.line.RequisitionLineT;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -40,22 +43,30 @@ public class GoodsReceiptService {
     private final GoodsReceiptSequenceRepository goodsReceiptSequenceRepository;
     private final GoodsReceiptLineRepository goodsReceiptLineRepository;
     private final GoodsReceiptRepository goodsReceiptRepository;
+    private final RequisitionService requisitionService;
 
     @Transactional
     public GoodsReceiptDetailsResponse create(CreateGoodsReceiptRequest request) {
         GoodsReceiptT goodsReceipt = new GoodsReceiptT();
         List<GoodsReceiptLinesRequest> receiptLinesRequest = request.receiptLines();
         List<PurchaseOrderLineT> poLines = validateCreateRequestAndLoadPoLines(request);
-        PurchaseOrderT purchaseOrder = poLines.getFirst().getPurchaseOrder();
+        Long purchaseOrderId = poLines.getFirst().getPurchaseOrder().getId();
+        PurchaseOrderT purchaseOrder = purchaseOrderService.getActivePOByDatabaseId(purchaseOrderId);
 
         goodsReceipt.setGoodsReceiptNumber(generateSequence());
         goodsReceipt.setReceiptDate(request.receiptDate());
         goodsReceipt.setDeliveryNotes(request.deliveryNotes());
         goodsReceipt.setPurchaseOrder(purchaseOrder);
 
+        List<String> poLinesWithPartialReceivedQuantities = new ArrayList<>();
+        List<RequisitionLineT> requisitionsWithPartialReceivedQuantities = new ArrayList<>();
+        Long parentRequisitionId = requisitionsWithPartialReceivedQuantities.getFirst().getRequisition().getId();
+        RequisitionT parentRequisition = requisitionService.getActiveRequisitionByDatabaseId(parentRequisitionId);
+
         poLines.forEach(
             poLine -> {
                 GoodsReceiptLineT goodsReceiptLine = new GoodsReceiptLineT();
+                RequisitionLineT requisitionLine = poLine.getRequisitionLine();
 
                 GoodsReceiptLinesRequest receiptLineRequest = receiptLinesRequest.stream()
                     .filter(e -> Objects.equals(e.poLinePublicId(), poLine.getPublicId()))
@@ -72,8 +83,20 @@ public class GoodsReceiptService {
                 goodsReceiptLine.setPoLine(poLine);
 
                 goodsReceipt.addReceiptLine(goodsReceiptLine);
+
+                if (goodsReceiptLine.getReceiptLineFlag() == ReceiptLineFlagEnum.UNDER_RECEIVED) {
+                    poLinesWithPartialReceivedQuantities.add(poLine.getPublicId());
+                    requisitionsWithPartialReceivedQuantities.add(requisitionLine);
+                }
             }
         );
+
+        if (!poLinesWithPartialReceivedQuantities.isEmpty()) {
+            purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.PARTIALLY_RECEIVED);
+        } else {
+            purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.FULLY_RECEIVED);
+            parentRequisition.setRequisitionState(RequisitionStateEnum.FULFILLED);
+        }
 
         GoodsReceiptT savedGoodsReceipt = goodsReceiptRepository.save(goodsReceipt);
 
@@ -144,7 +167,7 @@ public class GoodsReceiptService {
         }
     }
 
-    private BigDecimal computeTotalQuantityReceivedForPOLines(String  poLinePublicId, BigDecimal quantityReceivedNow) {
+    private BigDecimal computeTotalQuantityReceivedForPOLines(String poLinePublicId, BigDecimal quantityReceivedNow) {
         Set<GoodsReceiptLineT> receiptLines = goodsReceiptLineRepository.findAllNonCancelledForPOLine(poLinePublicId);
 
         return receiptLines.stream()
@@ -162,6 +185,10 @@ public class GoodsReceiptService {
         } else {
             return ReceiptLineFlagEnum.WELL_RECEIVED;
         }
+    }
+
+    private void updateRequisitionState() {
+
     }
 
 }

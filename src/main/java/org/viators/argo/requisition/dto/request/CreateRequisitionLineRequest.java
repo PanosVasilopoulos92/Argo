@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import org.viators.argo.item.ItemT;
 import org.viators.argo.item.enums.UnitOfMeasurementEnum;
-import org.viators.argo.requisition.RequisitionLineT;
+import org.viators.argo.requisition.line.RequisitionLineT;
 
 import java.math.BigDecimal;
 

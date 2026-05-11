@@ -2,7 +2,7 @@ package org.viators.argo.requisition.dto.response;
 
 import org.viators.argo.common.enums.ResourceStatusEnum;
 import org.viators.argo.item.enums.UnitOfMeasurementEnum;
-import org.viators.argo.requisition.RequisitionLineT;
+import org.viators.argo.requisition.line.RequisitionLineT;
 
 import java.math.BigDecimal;
 

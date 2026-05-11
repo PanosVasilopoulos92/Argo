@@ -23,6 +23,7 @@ import org.viators.argo.requisition.dto.response.RequisitionDetailsResponse;
 import org.viators.argo.requisition.dto.response.RequisitionSummaryResponse;
 import org.viators.argo.requisition.enums.RequisitionStateEnum;
 import org.viators.argo.requisition.enums.RequisitionTypeEnum;
+import org.viators.argo.requisition.line.RequisitionLineT;
 import org.viators.argo.requisition.sequence.RequisitionSequenceRepository;
 import org.viators.argo.requisition.sequence.RequisitionSequenceT;
 import org.viators.argo.user.UserLevelEnum;
@@ -250,6 +251,18 @@ public class RequisitionService {
 
         return requisitionRepository.findAll(specs, pageable)
             .map(RequisitionSummaryResponse::from);
+    }
+
+    @Transactional(readOnly = true)
+    public RequisitionT getActiveRequisitionByDatabaseId(Long databaseId) {
+        RequisitionT requisition = requisitionRepository.findById(databaseId)
+            .orElseThrow(() -> new ResourceNotFoundException("Requisition", "Id", databaseId));
+
+        if (requisition.getStatus() == ResourceStatusEnum.INACTIVE) {
+            throw new InvalidStateException("Requisition with Id: %d is inactive".formatted(databaseId));
+        }
+
+        return requisition;
     }
 
     // Private helper methods
