@@ -11,7 +11,7 @@ import java.util.List;
 @Repository
 public interface PurchaseOrderLineRepository extends JpaRepository<PurchaseOrderLineT, Long> {
 
-    @EntityGraph(attributePaths = {"goodsReceiptLines"})
+    @EntityGraph(attributePaths = {"goodsReceiptLines", "requisitionLine"})
     List<PurchaseOrderLineT> findAllByPublicIdIsIn(Collection<String> publicIds);
 
 }

@@ -1,4 +1,4 @@
-package org.viators.argo.requisition;
+package org.viators.argo.requisition.line;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -8,6 +8,7 @@ import org.viators.argo.item.ItemT;
 import org.viators.argo.item.enums.ItemCategoryEnum;
 import org.viators.argo.item.enums.UnitOfMeasurementEnum;
 import org.viators.argo.quotation.QuotationT;
+import org.viators.argo.requisition.RequisitionT;
 
 import java.math.BigDecimal;
 import java.util.HashSet;

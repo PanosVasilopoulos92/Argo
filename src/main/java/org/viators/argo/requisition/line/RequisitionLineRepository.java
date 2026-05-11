@@ -1,4 +1,4 @@
-package org.viators.argo.requisition;
+package org.viators.argo.requisition.line;
 
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;

@@ -1,4 +1,4 @@
-package org.viators.argo.requisition;
+package org.viators.argo.requisition.line;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
