@@ -8,5 +8,5 @@ import java.util.Optional;
 @Repository
 public interface GoodsReceiptSequenceRepository extends JpaRepository<GoodsReceiptSequenceT, Long> {
 
-    Optional<GoodsReceiptSequenceT> findFirstByYearOrderByLastValue(Integer year);
+    Optional<GoodsReceiptSequenceT> findFirstByYearOrderByLastValueDesc(Integer year);
 }

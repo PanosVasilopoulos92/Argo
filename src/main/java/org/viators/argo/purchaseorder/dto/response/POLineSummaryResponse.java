@@ -1,7 +1,7 @@
 package org.viators.argo.purchaseorder.dto.response;
 
 import lombok.Builder;
-import org.viators.argo.purchaseorder.PurchaseOrderLineT;
+import org.viators.argo.purchaseorder.line.PurchaseOrderLineT;
 
 import java.math.BigDecimal;
 

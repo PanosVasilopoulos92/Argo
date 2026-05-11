@@ -8,6 +8,7 @@ import org.viators.argo.common.enums.CurrencyEnum;
 import org.viators.argo.goodsreceipt.GoodsReceiptT;
 import org.viators.argo.purchaseorder.enums.PurchaseOrderStateEnum;
 import org.viators.argo.purchaseorder.enums.PurchaseOrderTypeEnum;
+import org.viators.argo.purchaseorder.line.PurchaseOrderLineT;
 import org.viators.argo.requisition.RequisitionT;
 import org.viators.argo.supplier.SupplierT;
 
@@ -89,6 +90,7 @@ public class PurchaseOrderT extends BaseEntity {
     private Set<PurchaseOrderLineT> poLines = new HashSet<>();
 
     @OneToMany(mappedBy = "purchaseOrder")
+    @Builder.Default
     private Set<GoodsReceiptT> goodsReceipts = new HashSet<>();
 
     // Helper methods

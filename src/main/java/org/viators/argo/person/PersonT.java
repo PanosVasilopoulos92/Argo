@@ -70,6 +70,7 @@ public abstract class PersonT extends BaseEntity {
     private String personType;
 
     @OneToMany(mappedBy = "person", fetch = FetchType.LAZY)
+    @Builder.Default
     private Set<PersonCertificateT> certificates = new HashSet<>();
 
     @OneToOne(mappedBy = "person")

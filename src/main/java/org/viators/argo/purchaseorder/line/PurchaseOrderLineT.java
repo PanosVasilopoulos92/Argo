@@ -1,16 +1,18 @@
-package org.viators.argo.purchaseorder;
+package org.viators.argo.purchaseorder.line;
 
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.viators.argo.common.entity.BaseEntity;
+import org.viators.argo.goodsreceipt.line.GoodsReceiptLineT;
 import org.viators.argo.item.enums.ItemCategoryEnum;
 import org.viators.argo.item.enums.UnitOfMeasurementEnum;
+import org.viators.argo.purchaseorder.PurchaseOrderT;
 import org.viators.argo.quotation.QuotationT;
 import org.viators.argo.requisition.RequisitionLineT;
-import org.viators.argo.supplier.SupplierT;
 
 import java.math.BigDecimal;
+import java.util.Set;
 
 @Entity
 @Table(name = "purchase_order_lines")
@@ -64,6 +66,9 @@ public class PurchaseOrderLineT extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "requisition_line_id", referencedColumnName = "id", nullable = false)
     private RequisitionLineT requisitionLine;
+
+    @OneToMany(mappedBy = "poLine", fetch = FetchType.LAZY)
+    private Set<GoodsReceiptLineT> goodsReceiptLines;
 
     // Helper methods
     public void addQuotation(QuotationT quotation) {

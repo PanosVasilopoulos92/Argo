@@ -21,6 +21,7 @@ import org.viators.argo.purchaseorder.dto.response.POLineSummaryResponse;
 import org.viators.argo.purchaseorder.dto.response.POSummaryResponse;
 import org.viators.argo.purchaseorder.enums.PurchaseOrderStateEnum;
 import org.viators.argo.purchaseorder.enums.PurchaseOrderTypeEnum;
+import org.viators.argo.purchaseorder.line.PurchaseOrderLineT;
 import org.viators.argo.purchaseorder.sequence.PurchaseOrderSequenceRepository;
 import org.viators.argo.purchaseorder.sequence.PurchaseOrderSequenceT;
 import org.viators.argo.quotation.QuotationService;
@@ -292,6 +293,19 @@ public class PurchaseOrderService {
 
         return purchaseOrderRepository.findAll(specs, pageable)
             .map(POSummaryResponse::from);
+    }
+
+    @Transactional(readOnly = true)
+    public PurchaseOrderT getActivePO(String poPublicId) {
+        PurchaseOrderT purchaseOrder = purchaseOrderRepository.findByPublicId(poPublicId)
+            .orElseThrow(() -> new ResourceNotFoundException("PO", "publicId", poPublicId));
+
+        if (purchaseOrder.getStatus() == ResourceStatusEnum.INACTIVE) {
+            throw new InvalidStateException("PO with publicId: %s is inactive"
+                .formatted(purchaseOrder.getPublicId()));
+        }
+
+        return purchaseOrder;
     }
 
     // Private helper methods

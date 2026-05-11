@@ -58,6 +58,7 @@ public class RequisitionLineT extends BaseEntity {
     private RequisitionT requisition;
 
     @OneToMany(mappedBy = "reqLine", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private Set<QuotationT> quotations = new HashSet<>();
 
 }

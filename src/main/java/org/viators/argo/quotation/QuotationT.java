@@ -5,7 +5,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.viators.argo.common.entity.BaseEntity;
 import org.viators.argo.common.enums.CurrencyEnum;
-import org.viators.argo.purchaseorder.PurchaseOrderLineT;
+import org.viators.argo.purchaseorder.line.PurchaseOrderLineT;
 import org.viators.argo.purchaseorder.enums.PurchaseOrderStateEnum;
 import org.viators.argo.quotation.enums.QuotationStateEnum;
 import org.viators.argo.requisition.RequisitionLineT;
