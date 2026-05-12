@@ -11,6 +11,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.viators.argo.config.CurrentKeycloakId;
+import org.viators.argo.goodsreceipt.GoodsReceiptService;
+import org.viators.argo.goodsreceipt.GoodsReceiptT_;
+import org.viators.argo.goodsreceipt.dto.response.GoodsReceiptSummaryResponse;
 import org.viators.argo.purchaseorder.dto.request.*;
 import org.viators.argo.purchaseorder.dto.response.PODetailsResponse;
 import org.viators.argo.purchaseorder.dto.response.POSummaryResponse;
@@ -23,6 +26,7 @@ import java.net.URI;
 public class PurchaseOrderController {
 
     private final PurchaseOrderService purchaseOrderService;
+    private final GoodsReceiptService goodsReceiptService;
 
     @GetMapping("/{poPublicId}")
     public ResponseEntity<PODetailsResponse> getPO(
@@ -101,6 +105,19 @@ public class PurchaseOrderController {
     ) {
         return ResponseEntity.ok(
             purchaseOrderService.cancelPO(keycloakId, poPublicId, request)
+        );
+    }
+
+    @GetMapping("/{poPublicId}/")
+    public ResponseEntity<Page<GoodsReceiptSummaryResponse>> getGoodsReceiptsForPO(
+        @PathVariable String poPublicId,
+        @PageableDefault
+        @SortDefault.SortDefaults({
+            @SortDefault(sort = GoodsReceiptT_.RECEIPT_DATE, direction = Sort.Direction.ASC)
+        }) Pageable pageable
+    ) {
+        return ResponseEntity.ok(
+            goodsReceiptService.getReceiptsForPO(poPublicId, pageable)
         );
     }
 }
