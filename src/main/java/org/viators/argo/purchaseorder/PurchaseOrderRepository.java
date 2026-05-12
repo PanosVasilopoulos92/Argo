@@ -7,6 +7,8 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -20,4 +22,11 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrderT, L
     @Override
     @EntityGraph(attributePaths = {"supplier", "requisition"})
     Page<PurchaseOrderT> findAll(@NonNull Specification<PurchaseOrderT> spec, @NonNull Pageable pageable);
+
+    @Query("""
+        select po from PurchaseOrderT po
+        left join fetch po.requisition r
+        where po.id = :databaseId
+        """)
+    Optional<PurchaseOrderT> findByDatabaseIdWithRequisition(@Param("databaseId") Long databaseId);
 }
