@@ -2,14 +2,21 @@ package org.viators.argo.goodsreceipt;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.viators.argo.common.exceptions.BusinessValidationException;
 import org.viators.argo.common.exceptions.InvalidStateException;
+import org.viators.argo.common.exceptions.ResourceNotFoundException;
 import org.viators.argo.goodsreceipt.dto.request.CreateGoodsReceiptRequest;
 import org.viators.argo.goodsreceipt.dto.request.GoodsReceiptLinesRequest;
+import org.viators.argo.goodsreceipt.dto.request.SearchReceiptFilterRequest;
 import org.viators.argo.goodsreceipt.dto.response.GoodsReceiptDetailsResponse;
 import org.viators.argo.goodsreceipt.dto.response.GoodsReceiptLineSummaryResponse;
+import org.viators.argo.goodsreceipt.dto.response.GoodsReceiptSummaryResponse;
 import org.viators.argo.goodsreceipt.enums.ReceiptLineFlagEnum;
 import org.viators.argo.goodsreceipt.line.GoodsReceiptLineRepository;
 import org.viators.argo.goodsreceipt.line.GoodsReceiptLineT;
@@ -107,6 +114,67 @@ public class GoodsReceiptService {
         return GoodsReceiptDetailsResponse.from(savedGoodsReceipt, receiptLinesCreated);
     }
 
+    // Read only methods
+    @Transactional(readOnly = true)
+    public GoodsReceiptDetailsResponse getGoodsReceipt(String receiptPublicId) {
+        GoodsReceiptT goodsReceipt = goodsReceiptRepository.findByPublicId(receiptPublicId)
+            .orElseThrow(() -> new ResourceNotFoundException("Receipt", "publicId", receiptPublicId));
+
+        List<GoodsReceiptLineSummaryResponse> receiptLinesSummary = goodsReceipt.getGoodsReceiptLines().stream()
+            .map(GoodsReceiptLineSummaryResponse::from)
+            .toList();
+
+        return GoodsReceiptDetailsResponse.from(goodsReceipt, receiptLinesSummary);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<GoodsReceiptSummaryResponse> getGoodsReceiptsFiltered(SearchReceiptFilterRequest filter,
+                                                                      Pageable pageable) {
+
+        Specification<GoodsReceiptT> specs = (root, query, cb) -> cb.conjunction();
+
+        if (StringUtils.hasText(filter.goodsReceiptNumber())) {
+            specs = specs.and(GoodsReceiptSpecs.hasReceiptNumber(filter.goodsReceiptNumber()));
+        }
+
+        if (StringUtils.hasText(filter.poPublicId())) {
+            specs = specs.and(GoodsReceiptSpecs.hasPOPublicId(filter.poPublicId()));
+        }
+
+        if (StringUtils.hasText(filter.poNumber())) {
+            specs = specs.and(GoodsReceiptSpecs.hasPONumber(filter.poNumber()));
+        }
+
+        if (StringUtils.hasText(filter.supplierPublicId())) {
+            specs = specs.and(GoodsReceiptSpecs.hasSupplierPublicId(filter.supplierPublicId()));
+        }
+
+        if (filter.receiptState() != null) {
+            specs = specs.and(GoodsReceiptSpecs.hasReceiptState(filter.receiptState()));
+        }
+
+        if (filter.containsOverReceivedLine()) {
+            specs = specs.and(GoodsReceiptSpecs.hasOverReceived());
+        }
+
+        if (filter.containsDamagedOrWrongItem()) {
+            specs = specs.and(GoodsReceiptSpecs.hasDamagedOrWrongItem());
+        }
+
+        specs = specs.and(GoodsReceiptSpecs.hasReceiptDateRange(filter.receiptDateFrom(), filter.receiptDateTo()));
+
+        return goodsReceiptRepository.findAll(specs, pageable)
+            .map(GoodsReceiptSummaryResponse::from);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<GoodsReceiptSummaryResponse> getReceiptsForPO(String poPublicId, Pageable pageable) {
+        Page<GoodsReceiptT> receipts = goodsReceiptRepository.findByPurchaseOrder_PublicId(poPublicId, pageable);
+
+        return receipts.map(GoodsReceiptSummaryResponse::from);
+
+    }
+
     // Private helper methods
     private String generateSequence() {
         int currentYear = LocalDate.now().getYear();
@@ -185,10 +253,6 @@ public class GoodsReceiptService {
         } else {
             return ReceiptLineFlagEnum.WELL_RECEIVED;
         }
-    }
-
-    private void updateRequisitionState() {
-
     }
 
 }
