@@ -160,7 +160,6 @@ public class ItemService {
     }
 
     // Private helper methods
-
     /**
      * Generates the next item code for the given category.
      * Format: {PREFIX}-{zero-padded 5-digit sequence}

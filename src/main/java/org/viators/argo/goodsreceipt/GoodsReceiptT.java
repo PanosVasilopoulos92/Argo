@@ -43,7 +43,7 @@ public class GoodsReceiptT extends BaseEntity {
     @Column(name = "cancelled_by")
     private String cancelledBy;
 
-    @Column(name = "cancellation_reason")
+    @Column(name = "cancellation_reason", length = 400)
     private String cancellationReason;
 
     @OneToMany(mappedBy = "goodsReceipt", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
