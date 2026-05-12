@@ -102,6 +102,13 @@
             <version>26.0.0</version>
         </dependency>
 
+        <!-- ── JPA Static Metamodel Generator ──────────────────────── -->
+        <dependency>
+            <groupId>org.hibernate.orm</groupId>
+            <artifactId>hibernate-processor</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- ── Utilities ─────────────────────────────────────────────── -->
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -135,10 +142,20 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
+                    <!--
+                        - Order matters: Lombok must run first so its
+                        generated getters/setters are visible when the
+                        Hibernate processor scans entities to build the
+                        *_ metamodel classes.
+                    -->
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
+                        </path>
+                        <path>
+                            <groupId>org.hibernate.orm</groupId>
+                            <artifactId>hibernate-processor</artifactId>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
