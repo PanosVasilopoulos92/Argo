@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -24,4 +25,6 @@ public interface GoodsReceiptRepository extends JpaRepository<GoodsReceiptT, Lon
 
     @EntityGraph(attributePaths = {GoodsReceiptT_.PURCHASE_ORDER})
     Page<GoodsReceiptT> findByPurchaseOrder_PublicId(String purchaseOrderPublicId, Pageable pageable);
+
+    List<GoodsReceiptT> findAllByPurchaseOrder_Id(Long purchaseOrderId);
 }

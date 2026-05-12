@@ -5,6 +5,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.viators.argo.config.CurrentKeycloakId;
+import org.viators.argo.goodsreceipt.dto.request.CancelGoodsReceiptRequest;
 import org.viators.argo.goodsreceipt.dto.request.CreateGoodsReceiptRequest;
 import org.viators.argo.goodsreceipt.dto.response.GoodsReceiptDetailsResponse;
 
@@ -33,6 +35,16 @@ public class GoodsReceiptController {
         return ResponseEntity.ok(
             goodsReceiptService.getGoodsReceipt(receiptPublicId)
         );
+    }
+
+    @PatchMapping("/{receiptPublicId}")
+    public ResponseEntity<Void> cancelGoodsReceipt(
+        @CurrentKeycloakId String keycloakPublicId,
+        @PathVariable String receiptPublicId,
+        @Valid @RequestBody CancelGoodsReceiptRequest request
+    ) {
+        goodsReceiptService.cancelGoodsReceipt(keycloakPublicId, receiptPublicId, request);
+        return ResponseEntity.noContent().build();
     }
 
 }

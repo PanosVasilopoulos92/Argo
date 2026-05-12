@@ -1,5 +1,6 @@
 package org.viators.argo.goodsreceipt;
 
+import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -8,15 +9,18 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.viators.argo.common.enums.ResourceStatusEnum;
 import org.viators.argo.common.exceptions.BusinessValidationException;
 import org.viators.argo.common.exceptions.InvalidStateException;
 import org.viators.argo.common.exceptions.ResourceNotFoundException;
+import org.viators.argo.goodsreceipt.dto.request.CancelGoodsReceiptRequest;
 import org.viators.argo.goodsreceipt.dto.request.CreateGoodsReceiptRequest;
 import org.viators.argo.goodsreceipt.dto.request.GoodsReceiptLinesRequest;
 import org.viators.argo.goodsreceipt.dto.request.SearchReceiptFilterRequest;
 import org.viators.argo.goodsreceipt.dto.response.GoodsReceiptDetailsResponse;
 import org.viators.argo.goodsreceipt.dto.response.GoodsReceiptLineSummaryResponse;
 import org.viators.argo.goodsreceipt.dto.response.GoodsReceiptSummaryResponse;
+import org.viators.argo.goodsreceipt.enums.GoodsReceiptStateEnum;
 import org.viators.argo.goodsreceipt.enums.ReceiptLineFlagEnum;
 import org.viators.argo.goodsreceipt.line.GoodsReceiptLineRepository;
 import org.viators.argo.goodsreceipt.line.GoodsReceiptLineT;
@@ -31,8 +35,10 @@ import org.viators.argo.requisition.RequisitionService;
 import org.viators.argo.requisition.RequisitionT;
 import org.viators.argo.requisition.enums.RequisitionStateEnum;
 import org.viators.argo.requisition.line.RequisitionLineT;
+import org.viators.argo.user.UserService;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,6 +57,7 @@ public class GoodsReceiptService {
     private final GoodsReceiptLineRepository goodsReceiptLineRepository;
     private final GoodsReceiptRepository goodsReceiptRepository;
     private final RequisitionService requisitionService;
+    private final UserService userService;
 
     @Transactional
     public GoodsReceiptDetailsResponse create(CreateGoodsReceiptRequest request) {
@@ -112,6 +119,28 @@ public class GoodsReceiptService {
             .toList();
 
         return GoodsReceiptDetailsResponse.from(savedGoodsReceipt, receiptLinesCreated);
+    }
+
+    @Transactional
+    public void cancelGoodsReceipt(String keycloakPublicId, String receiptPublicId, CancelGoodsReceiptRequest request) {
+        String loggedInUser = userService.getUser(keycloakPublicId).getUsername();
+        GoodsReceiptT goodsReceipt = loadReceiptAndValidateVersion(receiptPublicId, request.version());
+        PurchaseOrderT purchaseOrder = goodsReceipt.getPurchaseOrder();
+
+        if (goodsReceipt.getReceiptState() != GoodsReceiptStateEnum.RECORDED) {
+            throw new InvalidStateException("Only receipts in state 'RECORDED' can be cancelled");
+        }
+
+        handlePOStateChange(purchaseOrder);
+
+        goodsReceipt.getGoodsReceiptLines().forEach(
+            line -> line.setStatus(ResourceStatusEnum.INACTIVE)
+        );
+
+        goodsReceipt.setCancelledAt(Instant.now());
+        goodsReceipt.setCancelledBy(loggedInUser);
+        goodsReceipt.setCancellationReason(request.cancellationReason());
+
     }
 
     // Read only methods
@@ -252,6 +281,35 @@ public class GoodsReceiptService {
             return ReceiptLineFlagEnum.UNDER_RECEIVED;
         } else {
             return ReceiptLineFlagEnum.WELL_RECEIVED;
+        }
+    }
+
+    private GoodsReceiptT loadReceiptAndValidateVersion(String receiptPublicId, Long providedVersion) {
+        GoodsReceiptT goodsReceipt = goodsReceiptRepository.findByPublicId(receiptPublicId)
+            .orElseThrow(() -> new ResourceNotFoundException("Receipt", "publicId", receiptPublicId));
+
+        if (!Objects.equals(goodsReceipt.getVersion(), providedVersion)) {
+            throw new OptimisticLockException("Another user has modified this resource concurrently. Please try again");
+        }
+
+        return goodsReceipt;
+    }
+
+    private void handlePOStateChange(PurchaseOrderT purchaseOrder) {
+        List<GoodsReceiptT> purchaseOrderReceipts = goodsReceiptRepository.findAllByPurchaseOrder_Id(purchaseOrder.getId())
+            .stream()
+            .filter(goodsReceiptT -> goodsReceiptT.getReceiptState() != GoodsReceiptStateEnum.CANCELLED)
+            .toList();
+
+        if (purchaseOrderReceipts.size() == 1) {
+            if (purchaseOrder.getPurchaseOrderState() == PurchaseOrderStateEnum.FULLY_RECEIVED) {
+                purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.PARTIALLY_RECEIVED);
+            }
+            if (purchaseOrder.getPurchaseOrderState() == PurchaseOrderStateEnum.PARTIALLY_RECEIVED) {
+                purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.ACKNOWLEDGED);
+            }
+        } else {
+            purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.PARTIALLY_RECEIVED);
         }
     }
 
