@@ -13,16 +13,20 @@ import org.viators.argo.common.enums.ResourceStatusEnum;
 import org.viators.argo.common.exceptions.BusinessValidationException;
 import org.viators.argo.common.exceptions.InvalidStateException;
 import org.viators.argo.common.exceptions.ResourceNotFoundException;
+import org.viators.argo.goodsreceipt.line.GoodsReceiptLineService;
+import org.viators.argo.goodsreceipt.line.GoodsReceiptLineT;
 import org.viators.argo.item.ItemQueryService;
 import org.viators.argo.item.ItemT;
 import org.viators.argo.person.PersonQueryService;
 import org.viators.argo.person.PersonT;
+import org.viators.argo.purchaseorder.line.PurchaseOrderLineT;
 import org.viators.argo.requisition.dto.request.*;
 import org.viators.argo.requisition.dto.response.ReqDetailsWithRelationshipsSummaryResponse;
 import org.viators.argo.requisition.dto.response.RequisitionDetailsResponse;
 import org.viators.argo.requisition.dto.response.RequisitionSummaryResponse;
 import org.viators.argo.requisition.enums.RequisitionStateEnum;
 import org.viators.argo.requisition.enums.RequisitionTypeEnum;
+import org.viators.argo.requisition.line.RequisitionLineService;
 import org.viators.argo.requisition.line.RequisitionLineT;
 import org.viators.argo.requisition.sequence.RequisitionSequenceRepository;
 import org.viators.argo.requisition.sequence.RequisitionSequenceT;
@@ -32,8 +36,11 @@ import org.viators.argo.user.UserT;
 import org.viators.argo.vessel.VesselQueryService;
 import org.viators.argo.vessel.VesselT;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
@@ -49,6 +56,8 @@ public class RequisitionService {
     private final RequisitionApprovalHistRepository reqApprovalHistRepository;
     private final UserService userService;
     private final PersonQueryService personQueryService;
+    private final RequisitionLineService requisitionLineService;
+    private final GoodsReceiptLineService goodsReceiptLineService;
 
 
     @Transactional
@@ -212,6 +221,45 @@ public class RequisitionService {
         requisitionRepository.save(requisition);
     }
 
+    @Transactional
+    public void recomputeFulfilledStateIfApplicable(Long reqDatabaseId) {
+        RequisitionT requisition = requisitionRepository.findById(reqDatabaseId)
+            .orElseThrow(() -> new ResourceNotFoundException("Requisition", "Id", reqDatabaseId));
+
+        if (ResourceStatusEnum.INACTIVE.equals(requisition.getStatus())) {
+            throw new InvalidStateException("Requisition with public Id: %s is inactive. No further actions can be made."
+                .formatted(requisition.getPublicId()));
+        }
+
+        if (requisition.getRequisitionState() == RequisitionStateEnum.FULFILLED) {
+            throw new BusinessValidationException("Requisition with publicId: %s is in state 'FULFILLED' and cannot change");
+        } else if (requisition.getRequisitionState() != RequisitionStateEnum.FINALIZED) {
+            throw new BusinessValidationException("Requisition with publicId: %s is in not in state 'FINALIZED' so it cannot be used for POs");
+        }
+
+        List<String> reqLinesNotReceivedWholeQuantityNeeded = new ArrayList<>();
+
+        Set<RequisitionLineT> reqLines = requisitionLineService.findAllByRequisitionDatabaseId(requisition.getId());
+        reqLines.forEach(requisitionLine -> {
+                Set<PurchaseOrderLineT> poLinesForReqLine = requisitionLine.getPoLines();
+                poLinesForReqLine.forEach(poLine -> {
+                        Set<GoodsReceiptLineT> receiptLinesForPOLine = goodsReceiptLineService.getReceiptLinesForPOLine(poLine.getPublicId());
+                        BigDecimal receivedQuantity = receiptLinesForPOLine.stream()
+                            .map(GoodsReceiptLineT::getReceivedQuantity)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                        if (requisitionLine.getQuantity().compareTo(receivedQuantity) > 0) {
+                            reqLinesNotReceivedWholeQuantityNeeded.add(requisitionLine.getPublicId());
+                        }
+                    }
+                );
+            }
+        );
+
+        if (reqLinesNotReceivedWholeQuantityNeeded.isEmpty()) {
+            requisition.setRequisitionState(RequisitionStateEnum.FULFILLED);
+        }
+    }
+
     // Read only methods
     @Transactional(readOnly = true)
     public ReqDetailsWithRelationshipsSummaryResponse getRequisitionDetailsWithRelationshipsSummary(String reqPublicId) {
@@ -308,8 +356,7 @@ public class RequisitionService {
             case APPROVED ->
                 toState.equals(RequisitionStateEnum.REJECTED) || toState.equals(RequisitionStateEnum.APPROVED) ||
                     toState.equals(RequisitionStateEnum.FINALIZED);
-            case FINALIZED ->
-                toState == RequisitionStateEnum.FULFILLED;
+            case FINALIZED -> toState == RequisitionStateEnum.FULFILLED;
             case REJECTED, CANCELLED, FULFILLED -> false;
         };
     }

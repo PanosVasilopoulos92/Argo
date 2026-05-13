@@ -7,6 +7,7 @@ import org.viators.argo.common.entity.BaseEntity;
 import org.viators.argo.item.ItemT;
 import org.viators.argo.item.enums.ItemCategoryEnum;
 import org.viators.argo.item.enums.UnitOfMeasurementEnum;
+import org.viators.argo.purchaseorder.line.PurchaseOrderLineT;
 import org.viators.argo.quotation.QuotationT;
 import org.viators.argo.requisition.RequisitionT;
 
@@ -61,5 +62,8 @@ public class RequisitionLineT extends BaseEntity {
     @OneToMany(mappedBy = "reqLine", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private Set<QuotationT> quotations = new HashSet<>();
+
+    @OneToMany(mappedBy = "requisitionLine")
+    private Set<PurchaseOrderLineT> poLines = new HashSet<>();
 
 }

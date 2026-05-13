@@ -51,6 +51,11 @@ public class RequisitionLineService {
             .orElseThrow(() -> new ResourceNotFoundException("Requisition Line", "publicId", reqLinePublicId));
     }
 
+    @Transactional(readOnly = true)
+    public Set<RequisitionLineT> findAllByRequisitionDatabaseId(Long reqDatabaseId) {
+        return requisitionLineRepository.findAllByRequisition_Id(reqDatabaseId);
+    }
+
     // Private helper methods
     private static void validateStatusAndStateForQuotation(RequisitionLineT requisitionLine, RequisitionT requisition) {
         if (requisitionLine.getStatus() == ResourceStatusEnum.INACTIVE) {
