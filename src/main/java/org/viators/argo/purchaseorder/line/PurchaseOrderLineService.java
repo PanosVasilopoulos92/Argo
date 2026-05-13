@@ -17,6 +17,11 @@ public class PurchaseOrderLineService {
 
     @Transactional(readOnly = true)
     public List<PurchaseOrderLineT> getPOLines(Set<String> poLineIds) {
-        return purchaseOrderLineRepository.findAllByPublicIdIsIn(poLineIds);
+        return purchaseOrderLineRepository.findAllByPublicIDsIn(poLineIds);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PurchaseOrderLineT> getPOLinesForProvidedPOs(List<Long> poIds) {
+        return purchaseOrderLineRepository.findAllPOLinesForPOs(poIds);
     }
 }

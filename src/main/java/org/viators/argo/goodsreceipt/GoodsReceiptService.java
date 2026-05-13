@@ -74,8 +74,6 @@ public class GoodsReceiptService {
 
         List<String> poLinesWithPartialReceivedQuantities = new ArrayList<>();
         List<RequisitionLineT> requisitionsWithPartialReceivedQuantities = new ArrayList<>();
-        Long parentRequisitionId = requisitionsWithPartialReceivedQuantities.getFirst().getRequisition().getId();
-        RequisitionT parentRequisition = requisitionService.getActiveRequisitionByDatabaseId(parentRequisitionId);
 
         poLines.forEach(
             poLine -> {
@@ -90,7 +88,7 @@ public class GoodsReceiptService {
                 BigDecimal totalQuantityReceivedForPOLine = computeTotalQuantityReceivedForPOLines(
                     poLine.getPublicId(), receiptLineRequest.receivedQuantity());
 
-                goodsReceiptLine.setReceivedQuantity(totalQuantityReceivedForPOLine);
+                goodsReceiptLine.setReceivedQuantity(receiptLineRequest.receivedQuantity());
                 goodsReceiptLine.setReceivedGoodsCondition(receiptLineRequest.receivedGoodsCondition());
                 goodsReceiptLine.setReceiptLineFlag(calculateReceiptLineFlagEnum(poLine, totalQuantityReceivedForPOLine));
                 goodsReceiptLine.setNotes(receiptLineRequest.notes());
@@ -105,11 +103,34 @@ public class GoodsReceiptService {
             }
         );
 
-        if (!poLinesWithPartialReceivedQuantities.isEmpty()) {
-            purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.PARTIALLY_RECEIVED);
+        Long parentRequisitionId = requisitionsWithPartialReceivedQuantities.getFirst().getRequisition().getId();
+        RequisitionT parentRequisition = requisitionService.getActiveRequisitionByDatabaseId(parentRequisitionId);
+
+        List<PurchaseOrderT> posRelatedToParentRequisition = purchaseOrderService.getAllPOsForRequisition(parentRequisition.getPublicId());
+        List<Long> posRelatedToParentRequisitionIds = posRelatedToParentRequisition.stream()
+            .map(PurchaseOrderT::getId)
+            .toList();
+        List<PurchaseOrderLineT> poLineRelatedToParentRequisition = purchaseOrderLineService
+            .getPOLinesForProvidedPOs(posRelatedToParentRequisitionIds);
+
+
+        if (posRelatedToParentRequisition.size() == 1) {
+            if (!poLinesWithPartialReceivedQuantities.isEmpty()) {
+                purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.PARTIALLY_RECEIVED);
+            } else {
+                purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.FULLY_RECEIVED);
+                parentRequisition.setRequisitionState(RequisitionStateEnum.FULFILLED);
+            }
         } else {
-            purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.FULLY_RECEIVED);
-            parentRequisition.setRequisitionState(RequisitionStateEnum.FULFILLED);
+            if (!poLinesWithPartialReceivedQuantities.isEmpty()) {
+                purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.PARTIALLY_RECEIVED);
+            } else {
+                List<String> poLinesWithUnderReceivedQuantities = validateForMultiPOs(poLineRelatedToParentRequisition);
+                if (poLinesWithUnderReceivedQuantities.isEmpty()) {
+                    purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.FULLY_RECEIVED);
+                    parentRequisition.setRequisitionState(RequisitionStateEnum.FULFILLED);
+                }
+            }
         }
 
         GoodsReceiptT savedGoodsReceipt = goodsReceiptRepository.save(goodsReceipt);
@@ -119,6 +140,19 @@ public class GoodsReceiptService {
             .toList();
 
         return GoodsReceiptDetailsResponse.from(savedGoodsReceipt, receiptLinesCreated);
+    }
+
+    public List<String> validateForMultiPOs(List<PurchaseOrderLineT> poLineRelatedToParentRequisition) {
+        List<String> poLinesWithUnderReceivedQuantities = new ArrayList<>();
+        poLineRelatedToParentRequisition.forEach(poLine -> {
+                BigDecimal receivedQuantity = computeTotalQuantityReceivedForPOLines(poLine.getPublicId(), BigDecimal.ZERO);
+                if (poLine.getQuantity().compareTo(receivedQuantity) < 1) {
+                    poLinesWithUnderReceivedQuantities.add(poLine.getPublicId());
+                }
+            }
+        );
+
+        return poLinesWithUnderReceivedQuantities;
     }
 
     @Transactional
