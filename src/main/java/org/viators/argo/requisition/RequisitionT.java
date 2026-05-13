@@ -6,6 +6,7 @@ import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.Formula;
 import org.viators.argo.common.entity.BaseEntity;
 import org.viators.argo.person.PersonT;
+import org.viators.argo.purchaseorder.PurchaseOrderT;
 import org.viators.argo.requisition.enums.RequisitionPriorityEnum;
 import org.viators.argo.requisition.enums.RequisitionStateEnum;
 import org.viators.argo.requisition.enums.RequisitionTypeEnum;
@@ -95,6 +96,9 @@ public class RequisitionT extends BaseEntity {
     @OneToMany(mappedBy = "requisition", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private Set<RequisitionApprovalHistoryT> approvalHistory = new HashSet<>();
+
+    @OneToMany(mappedBy = "requisition", fetch = FetchType.LAZY)
+    private Set<PurchaseOrderT> purchaseOrders = new HashSet<>();
 
     @Formula("select count(rl.id) from requisition_lines rl where rl.requisition_id = id")
     @Setter(AccessLevel.NONE)
