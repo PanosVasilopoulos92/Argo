@@ -28,8 +28,17 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrderT, L
 
     @Query("""
         select po from PurchaseOrderT po
-        left join fetch po.requisition r
+        join fetch po.poLines pol
         where po.id = :databaseId
         """)
-    Optional<PurchaseOrderT> findByDatabaseIdWithRequisition(@Param("databaseId") Long databaseId);
+    Optional<PurchaseOrderT> findByDatabaseIdWithPoLines(@Param("databaseId") Long poDatabaseId);
+
+    @Query("""
+           select po from PurchaseOrderT po
+           where exists (
+                      select 1 from po.goodsReceipts gr
+                      where gr.receiptState != org.viators.argo.goodsreceipt.enums.GoodsReceiptStateEnum.CANCELLED
+                      )
+           """)
+    boolean hasPONotCancelledGoodsReceipts(@Param("poPublicId") String poPublicId);
 }

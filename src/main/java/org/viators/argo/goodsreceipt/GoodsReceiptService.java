@@ -40,10 +40,7 @@ import org.viators.argo.user.UserService;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -146,7 +143,7 @@ public class GoodsReceiptService {
         List<String> poLinesWithUnderReceivedQuantities = new ArrayList<>();
         poLineRelatedToParentRequisition.forEach(poLine -> {
                 BigDecimal receivedQuantity = computeTotalQuantityReceivedForPOLines(poLine.getPublicId(), BigDecimal.ZERO);
-                if (poLine.getQuantity().compareTo(receivedQuantity) < 1) {
+                if (poLine.getQuantity().compareTo(receivedQuantity) > 0) {
                     poLinesWithUnderReceivedQuantities.add(poLine.getPublicId());
                 }
             }
@@ -166,10 +163,6 @@ public class GoodsReceiptService {
         }
 
         handlePOStateChange(purchaseOrder);
-
-        goodsReceipt.getGoodsReceiptLines().forEach(
-            line -> line.setStatus(ResourceStatusEnum.INACTIVE)
-        );
 
         goodsReceipt.setCancelledAt(Instant.now());
         goodsReceipt.setCancelledBy(loggedInUser);
@@ -262,7 +255,7 @@ public class GoodsReceiptService {
 
         if (purchaseOrder.getPurchaseOrderState() != PurchaseOrderStateEnum.ACKNOWLEDGED &&
             purchaseOrder.getPurchaseOrderState() != PurchaseOrderStateEnum.PARTIALLY_RECEIVED) {
-            throw new BusinessValidationException("Only for POs in state 'ACKNOWLEDGED' and 'PARTIALLY_RECEIVED' can a receipt be created");
+            throw new BusinessValidationException("Only for POs in state 'ACKNOWLEDGED' and 'PARTIALLY_RECEIVED' can a receipt get created");
         }
 
         Set<String> poLinePublicIds = request.receiptLines().stream()
@@ -287,13 +280,7 @@ public class GoodsReceiptService {
     }
 
     private void validateUniquePOLineIdsProvided(List<GoodsReceiptLinesRequest> receiptLineIdsProvided, Set<String> poLinePublicIds) {
-        List<String> group = receiptLineIdsProvided.stream()
-            .map(GoodsReceiptLinesRequest::poLinePublicId)
-            .collect(Collectors.toCollection(ArrayList::new));
-
-        group.removeAll(poLinePublicIds);
-
-        if (!group.isEmpty()) {
+        if (receiptLineIdsProvided.size() != new HashSet<>(receiptLineIdsProvided).size()) {
             throw new InvalidStateException("You did not provide unique po lines. Please check and try again");
         }
     }

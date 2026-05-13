@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface RequisitionLineRepository extends JpaRepository<RequisitionLineT, Long> {
@@ -25,6 +26,17 @@ public interface RequisitionLineRepository extends JpaRepository<RequisitionLine
         WHERE l.requisition.id = :requisitionId
         """)
     long countByRequisitionIds(@Param("requisitionId") Long requisitionId);
+
+    @Query("""
+           select rl from RequisitionLineT rl
+           join rl.requisition r
+           left join fetch rl.poLines pol
+           join pol.purchaseOrder po
+           where r.id = :reqDatabaseId
+           and po.purchaseOrderState != org.viators.argo.purchaseorder.enums.PurchaseOrderStateEnum.CANCELLED
+           """)
+    Set<RequisitionLineT> findAllByRequisition_Id(@Param("reqDatabaseId") Long reqDatabaseId);
+
 
     List<RequisitionLineT> findAllReqLinesForThatAreNotFullfieldYet
 }
