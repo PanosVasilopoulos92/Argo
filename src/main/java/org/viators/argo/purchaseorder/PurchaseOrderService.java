@@ -321,6 +321,11 @@ public class PurchaseOrderService {
         return purchaseOrder;
     }
 
+    @Transactional(readOnly = true)
+    public List<PurchaseOrderT> getAllPOsForRequisition(String reqPublicId) {
+        return purchaseOrderRepository.findAllByRequisition_PublicId(reqPublicId);
+    }
+
     // Private helper methods
     private String generatePONumber() {
         int currentYear = LocalDate.now().getYear();

@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -22,6 +23,8 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrderT, L
     @Override
     @EntityGraph(attributePaths = {"supplier", "requisition"})
     Page<PurchaseOrderT> findAll(@NonNull Specification<PurchaseOrderT> spec, @NonNull Pageable pageable);
+
+    List<PurchaseOrderT> findAllByRequisition_PublicId(String requisitionPublicId);
 
     @Query("""
         select po from PurchaseOrderT po

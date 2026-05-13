@@ -25,4 +25,6 @@ public interface RequisitionLineRepository extends JpaRepository<RequisitionLine
         WHERE l.requisition.id = :requisitionId
         """)
     long countByRequisitionIds(@Param("requisitionId") Long requisitionId);
+
+    List<RequisitionLineT> findAllReqLinesForThatAreNotFullfieldYet
 }
