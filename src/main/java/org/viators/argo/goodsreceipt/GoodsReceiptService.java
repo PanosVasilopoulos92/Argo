@@ -40,10 +40,7 @@ import org.viators.argo.user.UserService;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -74,8 +71,6 @@ public class GoodsReceiptService {
 
         List<String> poLinesWithPartialReceivedQuantities = new ArrayList<>();
         List<RequisitionLineT> requisitionsWithPartialReceivedQuantities = new ArrayList<>();
-        Long parentRequisitionId = requisitionsWithPartialReceivedQuantities.getFirst().getRequisition().getId();
-        RequisitionT parentRequisition = requisitionService.getActiveRequisitionByDatabaseId(parentRequisitionId);
 
         poLines.forEach(
             poLine -> {
@@ -90,7 +85,7 @@ public class GoodsReceiptService {
                 BigDecimal totalQuantityReceivedForPOLine = computeTotalQuantityReceivedForPOLines(
                     poLine.getPublicId(), receiptLineRequest.receivedQuantity());
 
-                goodsReceiptLine.setReceivedQuantity(totalQuantityReceivedForPOLine);
+                goodsReceiptLine.setReceivedQuantity(receiptLineRequest.receivedQuantity());
                 goodsReceiptLine.setReceivedGoodsCondition(receiptLineRequest.receivedGoodsCondition());
                 goodsReceiptLine.setReceiptLineFlag(calculateReceiptLineFlagEnum(poLine, totalQuantityReceivedForPOLine));
                 goodsReceiptLine.setNotes(receiptLineRequest.notes());
@@ -105,11 +100,34 @@ public class GoodsReceiptService {
             }
         );
 
-        if (!poLinesWithPartialReceivedQuantities.isEmpty()) {
-            purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.PARTIALLY_RECEIVED);
+        Long parentRequisitionId = requisitionsWithPartialReceivedQuantities.getFirst().getRequisition().getId();
+        RequisitionT parentRequisition = requisitionService.getActiveRequisitionByDatabaseId(parentRequisitionId);
+
+        List<PurchaseOrderT> posRelatedToParentRequisition = purchaseOrderService.getAllPOsForRequisition(parentRequisition.getPublicId());
+        List<Long> posRelatedToParentRequisitionIds = posRelatedToParentRequisition.stream()
+            .map(PurchaseOrderT::getId)
+            .toList();
+        List<PurchaseOrderLineT> poLineRelatedToParentRequisition = purchaseOrderLineService
+            .getPOLinesForProvidedPOs(posRelatedToParentRequisitionIds);
+
+
+        if (posRelatedToParentRequisition.size() == 1) {
+            if (!poLinesWithPartialReceivedQuantities.isEmpty()) {
+                purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.PARTIALLY_RECEIVED);
+            } else {
+                purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.FULLY_RECEIVED);
+                parentRequisition.setRequisitionState(RequisitionStateEnum.FULFILLED);
+            }
         } else {
-            purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.FULLY_RECEIVED);
-            parentRequisition.setRequisitionState(RequisitionStateEnum.FULFILLED);
+            if (!poLinesWithPartialReceivedQuantities.isEmpty()) {
+                purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.PARTIALLY_RECEIVED);
+            } else {
+                List<String> poLinesWithUnderReceivedQuantities = validateForMultiPOs(poLineRelatedToParentRequisition);
+                if (poLinesWithUnderReceivedQuantities.isEmpty()) {
+                    purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.FULLY_RECEIVED);
+                    parentRequisition.setRequisitionState(RequisitionStateEnum.FULFILLED);
+                }
+            }
         }
 
         GoodsReceiptT savedGoodsReceipt = goodsReceiptRepository.save(goodsReceipt);
@@ -119,6 +137,19 @@ public class GoodsReceiptService {
             .toList();
 
         return GoodsReceiptDetailsResponse.from(savedGoodsReceipt, receiptLinesCreated);
+    }
+
+    public List<String> validateForMultiPOs(List<PurchaseOrderLineT> poLineRelatedToParentRequisition) {
+        List<String> poLinesWithUnderReceivedQuantities = new ArrayList<>();
+        poLineRelatedToParentRequisition.forEach(poLine -> {
+                BigDecimal receivedQuantity = computeTotalQuantityReceivedForPOLines(poLine.getPublicId(), BigDecimal.ZERO);
+                if (poLine.getQuantity().compareTo(receivedQuantity) > 0) {
+                    poLinesWithUnderReceivedQuantities.add(poLine.getPublicId());
+                }
+            }
+        );
+
+        return poLinesWithUnderReceivedQuantities;
     }
 
     @Transactional
@@ -132,10 +163,6 @@ public class GoodsReceiptService {
         }
 
         handlePOStateChange(purchaseOrder);
-
-        goodsReceipt.getGoodsReceiptLines().forEach(
-            line -> line.setStatus(ResourceStatusEnum.INACTIVE)
-        );
 
         goodsReceipt.setCancelledAt(Instant.now());
         goodsReceipt.setCancelledBy(loggedInUser);
@@ -228,7 +255,7 @@ public class GoodsReceiptService {
 
         if (purchaseOrder.getPurchaseOrderState() != PurchaseOrderStateEnum.ACKNOWLEDGED &&
             purchaseOrder.getPurchaseOrderState() != PurchaseOrderStateEnum.PARTIALLY_RECEIVED) {
-            throw new BusinessValidationException("Only for POs in state 'ACKNOWLEDGED' and 'PARTIALLY_RECEIVED' can a receipt be created");
+            throw new BusinessValidationException("Only for POs in state 'ACKNOWLEDGED' and 'PARTIALLY_RECEIVED' can a receipt get created");
         }
 
         Set<String> poLinePublicIds = request.receiptLines().stream()
@@ -253,13 +280,7 @@ public class GoodsReceiptService {
     }
 
     private void validateUniquePOLineIdsProvided(List<GoodsReceiptLinesRequest> receiptLineIdsProvided, Set<String> poLinePublicIds) {
-        List<String> group = receiptLineIdsProvided.stream()
-            .map(GoodsReceiptLinesRequest::poLinePublicId)
-            .collect(Collectors.toCollection(ArrayList::new));
-
-        group.removeAll(poLinePublicIds);
-
-        if (!group.isEmpty()) {
+        if (receiptLineIdsProvided.size() != new HashSet<>(receiptLineIdsProvided).size()) {
             throw new InvalidStateException("You did not provide unique po lines. Please check and try again");
         }
     }

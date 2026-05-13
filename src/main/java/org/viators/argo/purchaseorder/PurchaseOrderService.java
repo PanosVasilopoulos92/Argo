@@ -14,6 +14,8 @@ import org.viators.argo.common.enums.ResourceStatusEnum;
 import org.viators.argo.common.exceptions.BusinessValidationException;
 import org.viators.argo.common.exceptions.InvalidStateException;
 import org.viators.argo.common.exceptions.ResourceNotFoundException;
+import org.viators.argo.goodsreceipt.line.GoodsReceiptLineService;
+import org.viators.argo.goodsreceipt.line.GoodsReceiptLineT;
 import org.viators.argo.item.ItemT;
 import org.viators.argo.purchaseorder.dto.request.*;
 import org.viators.argo.purchaseorder.dto.response.PODetailsResponse;
@@ -27,9 +29,9 @@ import org.viators.argo.purchaseorder.sequence.PurchaseOrderSequenceT;
 import org.viators.argo.quotation.QuotationService;
 import org.viators.argo.quotation.QuotationT;
 import org.viators.argo.quotation.enums.QuotationStateEnum;
+import org.viators.argo.requisition.RequisitionT;
 import org.viators.argo.requisition.line.RequisitionLineService;
 import org.viators.argo.requisition.line.RequisitionLineT;
-import org.viators.argo.requisition.RequisitionT;
 import org.viators.argo.supplier.SupplierT;
 import org.viators.argo.user.UserService;
 import org.viators.argo.user.UserT;
@@ -49,6 +51,7 @@ public class PurchaseOrderService {
     private final QuotationService quotationService;
     private final RequisitionLineService requisitionLineService;
     private final PurchaseOrderRepository purchaseOrderRepository;
+    private final GoodsReceiptLineService goodsReceiptLineService;
     private final PurchaseOrderSequenceRepository purchaseOrderSequenceRepository;
     private final UserService userService;
 
@@ -245,6 +248,25 @@ public class PurchaseOrderService {
         return PODetailsResponse.from(purchaseOrder, poLines);
     }
 
+    @Transactional
+    public void recomputeStateAfterReceiptChange(Long poDatabaseId) {
+        PurchaseOrderT purchaseOrder = purchaseOrderRepository.findByDatabaseIdWithPoLines(poDatabaseId)
+            .orElseThrow(() -> new ResourceNotFoundException("PO", "Id", poDatabaseId));
+
+        if (purchaseOrderRepository.hasPONotCancelledGoodsReceipts(purchaseOrder.getPublicId())) {
+            purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.ACKNOWLEDGED);
+            return;
+        }
+
+        List<String> poLinesUnderReceived = getUnderReceivedPoLines(purchaseOrder);
+
+        if (poLinesUnderReceived.isEmpty()) {
+            purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.FULLY_RECEIVED);
+        } else {
+            purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.PARTIALLY_RECEIVED);
+        }
+    }
+
     // Read only methods
     @Transactional(readOnly = true)
     public PODetailsResponse getPO(String poPublicId) {
@@ -319,6 +341,11 @@ public class PurchaseOrderService {
         }
 
         return purchaseOrder;
+    }
+
+    @Transactional(readOnly = true)
+    public List<PurchaseOrderT> getAllPOsForRequisition(String reqPublicId) {
+        return purchaseOrderRepository.findAllByRequisition_PublicId(reqPublicId);
     }
 
     // Private helper methods
@@ -476,5 +503,24 @@ public class PurchaseOrderService {
         }
 
         return purchaseOrder;
+    }
+
+    private List<String> getUnderReceivedPoLines(PurchaseOrderT purchaseOrder) {
+        Set<PurchaseOrderLineT> poLines = purchaseOrder.getPoLines();
+        List<String> poLinesUnderReceived = new ArrayList<>();
+
+        poLines.forEach(poLine -> {
+                Set<GoodsReceiptLineT> receiptLinesOfPOLine = goodsReceiptLineService.getReceiptLinesForPOLine(poLine.getPublicId());
+
+                BigDecimal totalReceivedAmount = receiptLinesOfPOLine.stream()
+                    .map(GoodsReceiptLineT::getReceivedQuantity)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                if (poLine.getQuantity().compareTo(totalReceivedAmount) < 1) {
+                    poLinesUnderReceived.add(poLine.getPublicId());
+                }
+            }
+        );
+        return poLinesUnderReceived;
     }
 }

@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -23,10 +24,21 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrderT, L
     @EntityGraph(attributePaths = {"supplier", "requisition"})
     Page<PurchaseOrderT> findAll(@NonNull Specification<PurchaseOrderT> spec, @NonNull Pageable pageable);
 
+    List<PurchaseOrderT> findAllByRequisition_PublicId(String requisitionPublicId);
+
     @Query("""
         select po from PurchaseOrderT po
-        left join fetch po.requisition r
+        join fetch po.poLines pol
         where po.id = :databaseId
         """)
-    Optional<PurchaseOrderT> findByDatabaseIdWithRequisition(@Param("databaseId") Long databaseId);
+    Optional<PurchaseOrderT> findByDatabaseIdWithPoLines(@Param("databaseId") Long poDatabaseId);
+
+    @Query("""
+           select po from PurchaseOrderT po
+           where exists (
+                      select 1 from po.goodsReceipts gr
+                      where gr.receiptState != org.viators.argo.goodsreceipt.enums.GoodsReceiptStateEnum.CANCELLED
+                      )
+           """)
+    boolean hasPONotCancelledGoodsReceipts(@Param("poPublicId") String poPublicId);
 }
