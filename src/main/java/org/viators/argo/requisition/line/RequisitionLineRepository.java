@@ -36,7 +36,4 @@ public interface RequisitionLineRepository extends JpaRepository<RequisitionLine
            and po.purchaseOrderState != org.viators.argo.purchaseorder.enums.PurchaseOrderStateEnum.CANCELLED
            """)
     Set<RequisitionLineT> findAllByRequisition_Id(@Param("reqDatabaseId") Long reqDatabaseId);
-
-
-    List<RequisitionLineT> findAllReqLinesForThatAreNotFullfieldYet
 }

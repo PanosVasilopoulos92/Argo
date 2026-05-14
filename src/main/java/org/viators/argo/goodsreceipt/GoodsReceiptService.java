@@ -32,9 +32,6 @@ import org.viators.argo.purchaseorder.enums.PurchaseOrderStateEnum;
 import org.viators.argo.purchaseorder.line.PurchaseOrderLineService;
 import org.viators.argo.purchaseorder.line.PurchaseOrderLineT;
 import org.viators.argo.requisition.RequisitionService;
-import org.viators.argo.requisition.RequisitionT;
-import org.viators.argo.requisition.enums.RequisitionStateEnum;
-import org.viators.argo.requisition.line.RequisitionLineT;
 import org.viators.argo.user.UserService;
 
 import java.math.BigDecimal;
@@ -69,13 +66,9 @@ public class GoodsReceiptService {
         goodsReceipt.setDeliveryNotes(request.deliveryNotes());
         goodsReceipt.setPurchaseOrder(purchaseOrder);
 
-        List<String> poLinesWithPartialReceivedQuantities = new ArrayList<>();
-        List<RequisitionLineT> requisitionsWithPartialReceivedQuantities = new ArrayList<>();
-
         poLines.forEach(
             poLine -> {
                 GoodsReceiptLineT goodsReceiptLine = new GoodsReceiptLineT();
-                RequisitionLineT requisitionLine = poLine.getRequisitionLine();
 
                 GoodsReceiptLinesRequest receiptLineRequest = receiptLinesRequest.stream()
                     .filter(e -> Objects.equals(e.poLinePublicId(), poLine.getPublicId()))
@@ -92,64 +85,21 @@ public class GoodsReceiptService {
                 goodsReceiptLine.setPoLine(poLine);
 
                 goodsReceipt.addReceiptLine(goodsReceiptLine);
-
-                if (goodsReceiptLine.getReceiptLineFlag() == ReceiptLineFlagEnum.UNDER_RECEIVED) {
-                    poLinesWithPartialReceivedQuantities.add(poLine.getPublicId());
-                    requisitionsWithPartialReceivedQuantities.add(requisitionLine);
-                }
             }
         );
 
-        Long parentRequisitionId = requisitionsWithPartialReceivedQuantities.getFirst().getRequisition().getId();
-        RequisitionT parentRequisition = requisitionService.getActiveRequisitionByDatabaseId(parentRequisitionId);
-
-        List<PurchaseOrderT> posRelatedToParentRequisition = purchaseOrderService.getAllPOsForRequisition(parentRequisition.getPublicId());
-        List<Long> posRelatedToParentRequisitionIds = posRelatedToParentRequisition.stream()
-            .map(PurchaseOrderT::getId)
-            .toList();
-        List<PurchaseOrderLineT> poLineRelatedToParentRequisition = purchaseOrderLineService
-            .getPOLinesForProvidedPOs(posRelatedToParentRequisitionIds);
-
-
-        if (posRelatedToParentRequisition.size() == 1) {
-            if (!poLinesWithPartialReceivedQuantities.isEmpty()) {
-                purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.PARTIALLY_RECEIVED);
-            } else {
-                purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.FULLY_RECEIVED);
-                parentRequisition.setRequisitionState(RequisitionStateEnum.FULFILLED);
-            }
-        } else {
-            if (!poLinesWithPartialReceivedQuantities.isEmpty()) {
-                purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.PARTIALLY_RECEIVED);
-            } else {
-                List<String> poLinesWithUnderReceivedQuantities = validateForMultiPOs(poLineRelatedToParentRequisition);
-                if (poLinesWithUnderReceivedQuantities.isEmpty()) {
-                    purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.FULLY_RECEIVED);
-                    parentRequisition.setRequisitionState(RequisitionStateEnum.FULFILLED);
-                }
-            }
-        }
-
         GoodsReceiptT savedGoodsReceipt = goodsReceiptRepository.save(goodsReceipt);
+
+        purchaseOrderService.recomputeStateAfterReceiptChange(purchaseOrder.getId());
+
+        Long parentRequisitionId = poLines.getFirst().getRequisitionLine().getRequisition().getId();
+        requisitionService.recomputeFulfilledStateIfApplicable(parentRequisitionId);
 
         List<GoodsReceiptLineSummaryResponse> receiptLinesCreated = goodsReceipt.getGoodsReceiptLines().stream()
             .map(GoodsReceiptLineSummaryResponse::from)
             .toList();
 
         return GoodsReceiptDetailsResponse.from(savedGoodsReceipt, receiptLinesCreated);
-    }
-
-    public List<String> validateForMultiPOs(List<PurchaseOrderLineT> poLineRelatedToParentRequisition) {
-        List<String> poLinesWithUnderReceivedQuantities = new ArrayList<>();
-        poLineRelatedToParentRequisition.forEach(poLine -> {
-                BigDecimal receivedQuantity = computeTotalQuantityReceivedForPOLines(poLine.getPublicId(), BigDecimal.ZERO);
-                if (poLine.getQuantity().compareTo(receivedQuantity) > 0) {
-                    poLinesWithUnderReceivedQuantities.add(poLine.getPublicId());
-                }
-            }
-        );
-
-        return poLinesWithUnderReceivedQuantities;
     }
 
     @Transactional
@@ -162,12 +112,13 @@ public class GoodsReceiptService {
             throw new InvalidStateException("Only receipts in state 'RECORDED' can be cancelled");
         }
 
-        handlePOStateChange(purchaseOrder);
-
+        goodsReceipt.setReceiptState(GoodsReceiptStateEnum.CANCELLED);
         goodsReceipt.setCancelledAt(Instant.now());
         goodsReceipt.setCancelledBy(loggedInUser);
         goodsReceipt.setCancellationReason(request.cancellationReason());
+        goodsReceiptRepository.save(goodsReceipt);
 
+        purchaseOrderService.recomputeStateAfterReceiptChange(purchaseOrder.getId());
     }
 
     // Read only methods
@@ -314,24 +265,6 @@ public class GoodsReceiptService {
         }
 
         return goodsReceipt;
-    }
-
-    private void handlePOStateChange(PurchaseOrderT purchaseOrder) {
-        List<GoodsReceiptT> purchaseOrderReceipts = goodsReceiptRepository.findAllByPurchaseOrder_Id(purchaseOrder.getId())
-            .stream()
-            .filter(goodsReceiptT -> goodsReceiptT.getReceiptState() != GoodsReceiptStateEnum.CANCELLED)
-            .toList();
-
-        if (purchaseOrderReceipts.size() == 1) {
-            if (purchaseOrder.getPurchaseOrderState() == PurchaseOrderStateEnum.FULLY_RECEIVED) {
-                purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.PARTIALLY_RECEIVED);
-            }
-            if (purchaseOrder.getPurchaseOrderState() == PurchaseOrderStateEnum.PARTIALLY_RECEIVED) {
-                purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.ACKNOWLEDGED);
-            }
-        } else {
-            purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.PARTIALLY_RECEIVED);
-        }
     }
 
 }

@@ -98,6 +98,7 @@ public class RequisitionT extends BaseEntity {
     private Set<RequisitionApprovalHistoryT> approvalHistory = new HashSet<>();
 
     @OneToMany(mappedBy = "requisition", fetch = FetchType.LAZY)
+    @Builder.Default
     private Set<PurchaseOrderT> purchaseOrders = new HashSet<>();
 
     @Formula("select count(rl.id) from requisition_lines rl where rl.requisition_id = id")

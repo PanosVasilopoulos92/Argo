@@ -64,6 +64,7 @@ public class RequisitionLineT extends BaseEntity {
     private Set<QuotationT> quotations = new HashSet<>();
 
     @OneToMany(mappedBy = "requisitionLine")
+    @Builder.Default
     private Set<PurchaseOrderLineT> poLines = new HashSet<>();
 
 }

@@ -227,14 +227,15 @@ public class RequisitionService {
             .orElseThrow(() -> new ResourceNotFoundException("Requisition", "Id", reqDatabaseId));
 
         if (ResourceStatusEnum.INACTIVE.equals(requisition.getStatus())) {
-            throw new InvalidStateException("Requisition with public Id: %s is inactive. No further actions can be made."
-                .formatted(requisition.getPublicId()));
+            return;
         }
 
         if (requisition.getRequisitionState() == RequisitionStateEnum.FULFILLED) {
-            throw new BusinessValidationException("Requisition with publicId: %s is in state 'FULFILLED' and cannot change");
-        } else if (requisition.getRequisitionState() != RequisitionStateEnum.FINALIZED) {
-            throw new BusinessValidationException("Requisition with publicId: %s is in not in state 'FINALIZED' so it cannot be used for POs");
+            return;
+        }
+
+        if (requisition.getRequisitionState() != RequisitionStateEnum.FINALIZED) {
+            return;
         }
 
         List<String> reqLinesNotReceivedWholeQuantityNeeded = new ArrayList<>();
@@ -257,6 +258,7 @@ public class RequisitionService {
 
         if (reqLinesNotReceivedWholeQuantityNeeded.isEmpty()) {
             requisition.setRequisitionState(RequisitionStateEnum.FULFILLED);
+            requisitionRepository.save(requisition);
         }
     }
 
