@@ -253,8 +253,9 @@ public class PurchaseOrderService {
         PurchaseOrderT purchaseOrder = purchaseOrderRepository.findByDatabaseIdWithPoLines(poDatabaseId)
             .orElseThrow(() -> new ResourceNotFoundException("PO", "Id", poDatabaseId));
 
-        if (purchaseOrderRepository.hasPONotCancelledGoodsReceipts(purchaseOrder.getPublicId())) {
+        if (!purchaseOrderRepository.hasPONotCancelledGoodsReceipts(purchaseOrder.getPublicId())) {
             purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.ACKNOWLEDGED);
+            purchaseOrderRepository.save(purchaseOrder);
             return;
         }
 
@@ -265,6 +266,8 @@ public class PurchaseOrderService {
         } else {
             purchaseOrder.setPurchaseOrderState(PurchaseOrderStateEnum.PARTIALLY_RECEIVED);
         }
+
+        purchaseOrderRepository.save(purchaseOrder);
     }
 
     // Read only methods
@@ -516,7 +519,7 @@ public class PurchaseOrderService {
                     .map(GoodsReceiptLineT::getReceivedQuantity)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-                if (poLine.getQuantity().compareTo(totalReceivedAmount) < 1) {
+                if (totalReceivedAmount.compareTo(poLine.getQuantity()) < 0) {
                     poLinesUnderReceived.add(poLine.getPublicId());
                 }
             }
