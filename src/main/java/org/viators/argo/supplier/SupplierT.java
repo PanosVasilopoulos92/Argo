@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.viators.argo.common.entity.BaseEntity;
+import org.viators.argo.invoice.InvoiceT;
 import org.viators.argo.quotation.QuotationT;
 
 import java.util.HashSet;
@@ -41,4 +42,7 @@ public class SupplierT extends BaseEntity {
     @Builder.Default
     private Set<QuotationT> quotations = new HashSet<>();
 
+    @OneToMany(mappedBy = "supplier", fetch = FetchType.LAZY)
+    @Builder.Default
+    private Set<InvoiceT> invoices = new HashSet<>();
 }

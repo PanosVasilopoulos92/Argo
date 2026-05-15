@@ -5,6 +5,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.viators.argo.common.entity.BaseEntity;
 import org.viators.argo.goodsreceipt.line.GoodsReceiptLineT;
+import org.viators.argo.invoice.line.InvoiceLineT;
 import org.viators.argo.item.enums.ItemCategoryEnum;
 import org.viators.argo.item.enums.UnitOfMeasurementEnum;
 import org.viators.argo.purchaseorder.PurchaseOrderT;
@@ -12,6 +13,7 @@ import org.viators.argo.quotation.QuotationT;
 import org.viators.argo.requisition.line.RequisitionLineT;
 
 import java.math.BigDecimal;
+import java.util.HashSet;
 import java.util.Set;
 
 @Entity
@@ -68,13 +70,25 @@ public class PurchaseOrderLineT extends BaseEntity {
     private RequisitionLineT requisitionLine;
 
     @OneToMany(mappedBy = "poLine", fetch = FetchType.LAZY)
-    private Set<GoodsReceiptLineT> goodsReceiptLines;
+    @Builder.Default
+    private Set<GoodsReceiptLineT> goodsReceiptLines = new HashSet<>();
+
+    @OneToMany(mappedBy = "poLine", fetch = FetchType.LAZY)
+    @Builder.Default
+    private Set<InvoiceLineT> invoiceLines = new HashSet<>();
 
     // Helper methods
     public void addQuotation(QuotationT quotation) {
         if (quotation != null) {
             this.quotation = quotation;
             quotation.setPurchaseOrderLine(this);
+        }
+    }
+
+    public void addInvoiceLine(InvoiceLineT invoiceLine) {
+        if (invoiceLine != null) {
+            invoiceLines.add(invoiceLine);
+            invoiceLine.setPoLine(this);
         }
     }
 }

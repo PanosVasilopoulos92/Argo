@@ -106,7 +106,7 @@ public class SupplierService {
     }
 
     @Transactional(readOnly = true)
-    public SupplierT getActiveResource(String supPublicId) {
+    public SupplierT getActiveSupplier(String supPublicId) {
         SupplierT supplier = supplierRepository.findByPublicId(supPublicId)
             .orElseThrow(() -> new ResourceNotFoundException("Supplier", "publicId", supPublicId));
 

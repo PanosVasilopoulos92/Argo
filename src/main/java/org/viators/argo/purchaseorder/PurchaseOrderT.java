@@ -6,6 +6,7 @@ import lombok.experimental.SuperBuilder;
 import org.viators.argo.common.entity.BaseEntity;
 import org.viators.argo.common.enums.CurrencyEnum;
 import org.viators.argo.goodsreceipt.GoodsReceiptT;
+import org.viators.argo.invoice.InvoiceT;
 import org.viators.argo.purchaseorder.enums.PurchaseOrderStateEnum;
 import org.viators.argo.purchaseorder.enums.PurchaseOrderTypeEnum;
 import org.viators.argo.purchaseorder.line.PurchaseOrderLineT;
@@ -93,11 +94,22 @@ public class PurchaseOrderT extends BaseEntity {
     @Builder.Default
     private Set<GoodsReceiptT> goodsReceipts = new HashSet<>();
 
+    @OneToMany(mappedBy = "purchaseOrder", fetch = FetchType.LAZY)
+    @Builder.Default
+    private Set<InvoiceT> invoices = new HashSet<>();
+
     // Helper methods
     public void addPOLine(PurchaseOrderLineT poLine) {
         if (poLine != null) {
             this.poLines.add(poLine);
             poLine.setPurchaseOrder(this);
+        }
+    }
+
+    public void addInvoice(InvoiceT invoice) {
+        if (invoice != null) {
+            invoices.add(invoice);
+            invoice.setPurchaseOrder(this);
         }
     }
 }

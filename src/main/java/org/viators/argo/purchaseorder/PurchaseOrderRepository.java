@@ -39,4 +39,10 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrderT, L
            and gr.receiptState != org.viators.argo.goodsreceipt.enums.GoodsReceiptStateEnum.CANCELLED
            """)
     boolean hasPONotCancelledGoodsReceipts(@Param("poPublicId") String poPublicId);
+
+    @Query("""
+        select po from PurchaseOrderT po
+        where po.publicId = :poPublicId
+        """)
+    Optional<PurchaseOrderT> findPurchaseOrder(@Param("poPublicId") String poPublicId);
 }

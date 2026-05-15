@@ -46,7 +46,7 @@ public class QuotationService {
     public QuotationDetailsResponse create(CreateQuotationRequest request) {
         RequisitionLineT requisitionLine = requisitionLineService.getLineAndValidateStatusAndStateForQuotation(
             request.requisitionLinePublicId());
-        SupplierT supplier = supplierService.getActiveResource(request.supplierPublicId());
+        SupplierT supplier = supplierService.getActiveSupplier(request.supplierPublicId());
 
         QuotationT quotation = request.toEntity(requisitionLine, supplier);
         return QuotationDetailsResponse.from(quotationRepository.save(quotation));
@@ -54,7 +54,7 @@ public class QuotationService {
 
     @Transactional
     public List<QuotationDetailsResponse> createBulk(BulkCreateQuotationsRequest request) {
-        SupplierT supplier = supplierService.getActiveResource(request.supplierPublicId());
+        SupplierT supplier = supplierService.getActiveSupplier(request.supplierPublicId());
         Set<String> reqLinesIds = validateLines(request.lineQuotations());
 
         Map<String, RequisitionLineT> linesByPublicId = requisitionLineService
