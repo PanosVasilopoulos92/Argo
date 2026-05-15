@@ -8,13 +8,16 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 
 @Repository
 public interface PurchaseOrderLineRepository extends JpaRepository<PurchaseOrderLineT, Long> {
 
+    Optional<PurchaseOrderLineT> findByPublicId(String publicId);
+
     @EntityGraph(attributePaths = {"goodsReceiptLines", "requisitionLine"})
-    List<PurchaseOrderLineT> findAllByPublicIDsIn(Collection<String> publicIds);
+    List<PurchaseOrderLineT> findAllByPublicIdIn(Collection<String> publicIds);
 
     @Query("""
            select pol from PurchaseOrderLineT pol

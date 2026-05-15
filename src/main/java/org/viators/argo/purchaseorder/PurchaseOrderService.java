@@ -351,10 +351,16 @@ public class PurchaseOrderService {
         return purchaseOrderRepository.findAllByRequisition_PublicId(reqPublicId);
     }
 
+    @Transactional(readOnly = true)
+    public PurchaseOrderT getPurchaseOrder(String poPublicId) {
+        return purchaseOrderRepository.findPurchaseOrder(poPublicId)
+            .orElseThrow(() -> new ResourceNotFoundException("PO", "publicId", poPublicId));
+    }
+
     // Private helper methods
     private String generatePONumber() {
         int currentYear = LocalDate.now().getYear();
-        PurchaseOrderSequenceT latestPurchaseOrderSequence = purchaseOrderSequenceRepository.findFirstByYearOrderByLastValueDesc(currentYear)
+        PurchaseOrderSequenceT latestPurchaseOrderSequence = purchaseOrderSequenceRepository.findFirstByYearOrderByLastValue(currentYear)
             .orElse(new PurchaseOrderSequenceT(currentYear, 0L, null));
 
         PurchaseOrderSequenceT nextVal = new PurchaseOrderSequenceT(

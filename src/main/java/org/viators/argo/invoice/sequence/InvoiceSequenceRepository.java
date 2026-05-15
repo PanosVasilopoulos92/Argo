@@ -1,4 +1,4 @@
-package org.viators.argo.purchaseorder.sequence;
+package org.viators.argo.invoice.sequence;
 
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -8,8 +8,8 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface PurchaseOrderSequenceRepository extends JpaRepository<PurchaseOrderSequenceT, Long> {
+public interface InvoiceSequenceRepository extends JpaRepository<InvoiceSequenceT, Long> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    Optional<PurchaseOrderSequenceT> findFirstByYearOrderByLastValue(Integer year);
+    Optional<InvoiceSequenceT> findFirstByYearOrderByLastValue(Integer year);
 }

@@ -9,7 +9,6 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-import org.viators.argo.common.enums.ResourceStatusEnum;
 import org.viators.argo.common.exceptions.BusinessValidationException;
 import org.viators.argo.common.exceptions.InvalidStateException;
 import org.viators.argo.common.exceptions.ResourceNotFoundException;
@@ -185,7 +184,7 @@ public class GoodsReceiptService {
     // Private helper methods
     private String generateSequence() {
         int currentYear = LocalDate.now().getYear();
-        GoodsReceiptSequenceT latestSeq = goodsReceiptSequenceRepository.findFirstByYearOrderByLastValueDesc(currentYear)
+        GoodsReceiptSequenceT latestSeq = goodsReceiptSequenceRepository.findFirstByYearOrderByLastValue(currentYear)
             .orElse(new GoodsReceiptSequenceT(currentYear, 0L, null));
 
         GoodsReceiptSequenceT nextVal = new GoodsReceiptSequenceT(
