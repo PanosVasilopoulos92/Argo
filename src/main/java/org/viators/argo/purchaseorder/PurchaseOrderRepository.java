@@ -42,7 +42,9 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrderT, L
 
     @Query("""
         select po from PurchaseOrderT po
+        join fetch po.supplier s
+        join fetch po.poLines pol
         where po.publicId = :poPublicId
         """)
-    Optional<PurchaseOrderT> findPurchaseOrder(@Param("poPublicId") String poPublicId);
+    Optional<PurchaseOrderT> findPurchaseOrderWithLinesAndSupplier(@Param("poPublicId") String poPublicId);
 }
