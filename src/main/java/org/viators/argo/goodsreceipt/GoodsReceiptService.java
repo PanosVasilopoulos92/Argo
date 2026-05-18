@@ -178,7 +178,15 @@ public class GoodsReceiptService {
         Page<GoodsReceiptT> receipts = goodsReceiptRepository.findByPurchaseOrder_PublicId(poPublicId, pageable);
 
         return receipts.map(GoodsReceiptSummaryResponse::from);
+    }
 
+    public BigDecimal computeTotalQuantityReceivedForPOLines(String poLinePublicId, BigDecimal quantityReceivedNow) {
+        Set<GoodsReceiptLineT> receiptLines = goodsReceiptLineRepository.findAllNonCancelledForPOLine(poLinePublicId);
+
+        return receiptLines.stream()
+            .filter(Objects::nonNull)
+            .map(GoodsReceiptLineT::getReceivedQuantity)
+            .reduce(quantityReceivedNow, BigDecimal::add);
     }
 
     // Private helper methods
@@ -233,15 +241,6 @@ public class GoodsReceiptService {
         if (receiptLineIdsProvided.size() != new HashSet<>(receiptLineIdsProvided).size()) {
             throw new InvalidStateException("You did not provide unique po lines. Please check and try again");
         }
-    }
-
-    private BigDecimal computeTotalQuantityReceivedForPOLines(String poLinePublicId, BigDecimal quantityReceivedNow) {
-        Set<GoodsReceiptLineT> receiptLines = goodsReceiptLineRepository.findAllNonCancelledForPOLine(poLinePublicId);
-
-        return receiptLines.stream()
-            .filter(Objects::nonNull)
-            .map(GoodsReceiptLineT::getReceivedQuantity)
-            .reduce(quantityReceivedNow, BigDecimal::add);
     }
 
     private ReceiptLineFlagEnum calculateReceiptLineFlagEnum(PurchaseOrderLineT poLine, BigDecimal totalQuantityReceived) {

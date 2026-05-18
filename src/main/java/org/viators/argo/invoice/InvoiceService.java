@@ -9,6 +9,7 @@ import org.viators.argo.common.enums.CurrencyEnum;
 import org.viators.argo.common.exceptions.BusinessValidationException;
 import org.viators.argo.common.exceptions.DuplicateResourceException;
 import org.viators.argo.common.exceptions.InvalidStateException;
+import org.viators.argo.goodsreceipt.GoodsReceiptService;
 import org.viators.argo.invoice.dto.request.CreateInvoiceLineRequest;
 import org.viators.argo.invoice.dto.request.CreateInvoiceRequest;
 import org.viators.argo.invoice.dto.response.InvoiceDetailsResponse;
@@ -43,6 +44,7 @@ public class InvoiceService {
     private final PurchaseOrderLineService purchaseOrderLineService;
     private final SupplierService supplierService;
     private final InvoiceSequenceRepository invoiceSequenceRepository;
+    private final GoodsReceiptService goodsReceiptService;
 
     @Transactional
     public InvoiceDetailsResponse create(CreateInvoiceRequest request) {
@@ -80,7 +82,7 @@ public class InvoiceService {
                         poLine.getUnitPrice(), invLineRequest.unitPrice())
                     );
                     invoiceLine.setQuantityVariance(calculateQuantityVarianceBetweenPOLineAndInvoiceLine(
-                        poLine.getQuantity(), invLineRequest.quantity())
+                        poLine.getPublicId(), invLineRequest.quantity())
                     );
                     poLine.addInvoiceLine(invoiceLine);
                 }
@@ -108,16 +110,16 @@ public class InvoiceService {
 
     // Private helper methods
     private void validateCreate(CreateInvoiceRequest request, Long supplierDatabaseId) {
-        Set<CreateInvoiceLineRequest> invoiceLines = new HashSet<>(request.invoiceLines());
+        List<CreateInvoiceLineRequest> invoiceLines = request.invoiceLines();
 
-        if (!request.invoiceLines().removeAll(invoiceLines)) {
-            throw new DuplicateResourceException("You have provided same invoice lines more than once");
+        if (invoiceLines.size() != new HashSet<>(invoiceLines).size()) {
+            throw new DuplicateResourceException("You have provided same invoice line more than once");
         }
 
         validateTotalAmountOfInvoice(request);
         validatePoLinesProvidedMatchPO(request.purchaseOrderPublicId(), request.invoiceLines());
 
-        if (invoiceRepository.existsByPaymentReferenceAndSupplier_Id(request.supplierInvoiceReference(), supplierDatabaseId)) {
+        if (invoiceRepository.existsBySupplierInvoiceReferenceAndSupplier_Id(request.supplierInvoiceReference(), supplierDatabaseId)) {
             throw new BusinessValidationException("Supplier's invoice reference: %s already exists in system"
                 .formatted(request.supplierInvoiceReference()));
         }
@@ -157,30 +159,31 @@ public class InvoiceService {
     }
 
     private void validatePoLinesProvidedMatchPO(String poPublicId, List<CreateInvoiceLineRequest> providedInvoiceLines) {
-        List<String> providedPOLines = providedInvoiceLines.stream()
+        Set<String> providedPOLines = providedInvoiceLines.stream()
             .map(CreateInvoiceLineRequest::purchaseOrderLinePublicId)
-            .collect(Collectors.toCollection(ArrayList::new));
+            .collect(Collectors.toSet());
 
-        if (!StringUtils.hasText(poPublicId) && !providedPOLines.isEmpty()) {
-            throw new BusinessValidationException("You have provided PO lines without providing a PO");
-        } else if (!StringUtils.hasText(poPublicId) && providedPOLines.isEmpty()) {
+        if (!StringUtils.hasText(poPublicId)) {
+            if (!providedPOLines.isEmpty()) {
+                throw new BusinessValidationException("You have provided PO lines without providing a PO");
+            }
             return; // No validation needed if user do not provide PO and PO lines
         }
 
         // Verify that provided PO lines belong to provided PO
         PurchaseOrderT purchaseOrderT = purchaseOrderService.getActivePO(poPublicId);
-        List<String> poLinesOfPOProvided = purchaseOrderT.getPoLines().stream()
+        Set<String> poLinesOfPOProvided = purchaseOrderT.getPoLines().stream()
             .map(PurchaseOrderLineT::getPublicId)
-            .collect(Collectors.toCollection(ArrayList::new));
+            .collect(Collectors.toSet());
 
-        if (providedPOLines.removeAll(poLinesOfPOProvided)) {
+        if (!poLinesOfPOProvided.containsAll(providedPOLines)) {
             throw new BusinessValidationException("You have provided PO lines that do not correspond to provided PO");
         }
     }
 
     private String generateInvoiceSequence() {
         int currentYear = LocalDate.now().getYear();
-        InvoiceSequenceT latestInvoiceSequence = invoiceSequenceRepository.findFirstByYearOrderByLastValue(currentYear)
+        InvoiceSequenceT latestInvoiceSequence = invoiceSequenceRepository.findFirstByYearOrderByLastValueDesc(currentYear)
             .orElse(new InvoiceSequenceT(currentYear, 0L, null));
 
         InvoiceSequenceT nextInvoiceSequence = new InvoiceSequenceT(
@@ -237,14 +240,15 @@ public class InvoiceService {
 
     }
 
-    private BigDecimal calculateQuantityVarianceBetweenPOLineAndInvoiceLine(BigDecimal poLineQuantity, BigDecimal invoiceLineQuantity) {
-        if (poLineQuantity.compareTo(invoiceLineQuantity) != 0) {
-            return poLineQuantity.compareTo(invoiceLineQuantity) > 0
-                ? poLineQuantity.subtract(invoiceLineQuantity)
-                : invoiceLineQuantity.subtract(poLineQuantity);
+    private BigDecimal calculateQuantityVarianceBetweenPOLineAndInvoiceLine(String poLinePublicId, BigDecimal invoiceLineQuantity) {
+        BigDecimal receivedQuantity = goodsReceiptService.computeTotalQuantityReceivedForPOLines(poLinePublicId, BigDecimal.ZERO);
+
+        if (receivedQuantity.compareTo(invoiceLineQuantity) != 0) {
+            return receivedQuantity.compareTo(invoiceLineQuantity) > 0
+                ? receivedQuantity.subtract(invoiceLineQuantity)
+                : invoiceLineQuantity.subtract(receivedQuantity);
         } else {
             return BigDecimal.ZERO;
         }
-
     }
 }

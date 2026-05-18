@@ -6,5 +6,5 @@ import org.springframework.stereotype.Service;
 @Service
 public interface InvoiceRepository extends JpaRepository<InvoiceT, Long> {
 
-    boolean existsByPaymentReferenceAndSupplier_Id(String paymentReference, Long supplierId);
+    boolean existsBySupplierInvoiceReferenceAndSupplier_Id(String paymentReference, Long supplierId);
 }

@@ -47,7 +47,7 @@ public class InvoiceLineT extends BaseEntity {
     @JoinColumn(name = "invoice_id", referencedColumnName = "id", nullable = false)
     private InvoiceT invoice;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "po_line_id", referencedColumnName = "id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "po_line_id", referencedColumnName = "id")
     private PurchaseOrderLineT poLine;
 }

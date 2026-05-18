@@ -11,5 +11,5 @@ import java.util.Optional;
 public interface InvoiceSequenceRepository extends JpaRepository<InvoiceSequenceT, Long> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    Optional<InvoiceSequenceT> findFirstByYearOrderByLastValue(Integer year);
+    Optional<InvoiceSequenceT> findFirstByYearOrderByLastValueDesc(Integer year);
 }
