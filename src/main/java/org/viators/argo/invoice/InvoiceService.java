@@ -9,7 +9,9 @@ import org.viators.argo.common.enums.CurrencyEnum;
 import org.viators.argo.common.exceptions.BusinessValidationException;
 import org.viators.argo.common.exceptions.DuplicateResourceException;
 import org.viators.argo.common.exceptions.InvalidStateException;
+import org.viators.argo.common.exceptions.ResourceNotFoundException;
 import org.viators.argo.goodsreceipt.GoodsReceiptService;
+import org.viators.argo.invoice.dto.request.AssociateInvoiceToPORequest;
 import org.viators.argo.invoice.dto.request.CreateInvoiceLineRequest;
 import org.viators.argo.invoice.dto.request.CreateInvoiceRequest;
 import org.viators.argo.invoice.dto.response.InvoiceDetailsResponse;
@@ -26,6 +28,8 @@ import org.viators.argo.purchaseorder.line.PurchaseOrderLineService;
 import org.viators.argo.purchaseorder.line.PurchaseOrderLineT;
 import org.viators.argo.supplier.SupplierService;
 import org.viators.argo.supplier.SupplierT;
+import org.viators.argo.user.UserService;
+import org.viators.argo.user.UserT;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -45,6 +49,7 @@ public class InvoiceService {
     private final SupplierService supplierService;
     private final InvoiceSequenceRepository invoiceSequenceRepository;
     private final GoodsReceiptService goodsReceiptService;
+    private final UserService userService;
 
     @Transactional
     public InvoiceDetailsResponse create(CreateInvoiceRequest request) {
@@ -77,7 +82,9 @@ public class InvoiceService {
 
                 if (invoice.getInvoiceState() == InvoiceStateEnum.MATCHED) {
                     PurchaseOrderLineT poLine = purchaseOrderLineService.findByPublicId(invLineRequest.purchaseOrderLinePublicId());
-                    invoiceLine.setMatchStatus(matchInvoiceLineToPOLineEngine(poLine.getPublicId(), invLineRequest));
+                    invoiceLine.setMatchStatus(matchInvoiceLineToPOLineEngine(
+                        poLine.getPublicId(), invLineRequest.unitPrice(), invLineRequest.quantity())
+                    );
                     invoiceLine.setPriceVariance(calculatePriceVarianceBetweenPOLineAndInvoiceLine(
                         poLine.getUnitPrice(), invLineRequest.unitPrice())
                     );
@@ -91,11 +98,11 @@ public class InvoiceService {
             }
         );
 
-        List<InvoiceLineT> unmatchedInvoiceLines = invoice.getInvoiceLines().stream()
+        List<InvoiceLineT> notMatchedInvoiceLines = invoice.getInvoiceLines().stream()
             .filter(invoiceLineT -> invoiceLineT.getMatchStatus() != MatchStatusEnum.MATCHED)
             .toList();
 
-        if (!unmatchedInvoiceLines.isEmpty()) {
+        if (!notMatchedInvoiceLines.isEmpty()) {
             invoice.setInvoiceState(InvoiceStateEnum.DISPUTED);
         }
 
@@ -106,6 +113,65 @@ public class InvoiceService {
             .toList();
 
         return InvoiceDetailsResponse.from(invoice, invoiceLines);
+    }
+
+    public InvoiceDetailsResponse associateInvoiceToPO(String keycloakId, String invoicePublicId, AssociateInvoiceToPORequest request) {
+        String loggedInUser = userService.getUser(keycloakId).getUsername();
+
+        InvoiceT invoice = invoiceRepository.findByPublicIdWithLines(invoicePublicId)
+            .orElseThrow(() -> new ResourceNotFoundException("Invoice", "publicId", invoicePublicId));
+
+        if (invoiceRepository.existsByPublicIdAndPurchaseOrderIsNull(invoicePublicId)) {
+            throw new BusinessValidationException("Invoice with publicId: %s is already associated with a PO"
+                .formatted(invoicePublicId));
+        }
+
+        if (invoice.getInvoiceState() != InvoiceStateEnum.RECEIVED) {
+            throw new BusinessValidationException("Invoice is not in state 'RECEIVED' and therefore it cannot get matched to a PO");
+        }
+
+        Set<InvoiceLineT> invoiceLines = invoice.getInvoiceLines();
+
+        PurchaseOrderT po = loadPOAndValidate(request.purchaseOrderPublicId(), invoice.getSupplier().getId(), invoice.getCurrency());
+        Set<PurchaseOrderLineT> poLines = po.getPoLines();
+
+        po.addInvoice(invoice);
+
+        request.lineAssociations().forEach((invoiceLinePublicId, poLinePublicId) -> {
+            PurchaseOrderLineT poLine = poLines.stream()
+                .filter(line -> line.getPublicId().equals(poLinePublicId))
+                .findFirst()
+                .orElseThrow();
+
+            InvoiceLineT invoiceLine = invoiceLines.stream()
+                .filter(line -> line.getPublicId().equals(invoiceLinePublicId))
+                .findFirst()
+                .orElseThrow();
+
+            invoiceLine.setMatchStatus(matchInvoiceLineToPOLineEngine(poLine.getPublicId(), invoiceLine.getUnitPrice(), invoiceLine.getQuantity()));
+            poLine.addInvoiceLine(invoiceLine);
+        });
+
+        List<InvoiceLineT> notMatchedInvoiceLines = invoice.getInvoiceLines().stream()
+            .filter(invoiceLineT -> invoiceLineT.getMatchStatus() != MatchStatusEnum.MATCHED)
+            .toList();
+
+        if (!notMatchedInvoiceLines.isEmpty()) {
+            invoice.setInvoiceState(InvoiceStateEnum.DISPUTED);
+        } else {
+            invoice.setInvoiceState(InvoiceStateEnum.MATCHED);
+        }
+
+        invoice.setMatchedAt(Instant.now());
+        invoice.setMatchedBy(loggedInUser);
+
+        InvoiceT savedInvoice = invoiceRepository.save(invoice);
+
+        List<InvoiceLineSummaryResponse> savedInvoiceLines = savedInvoice.getInvoiceLines().stream()
+            .map(InvoiceLineSummaryResponse::from)
+            .toList();
+
+        return InvoiceDetailsResponse.from(invoice, savedInvoiceLines);
     }
 
     // Private helper methods
@@ -202,23 +268,23 @@ public class InvoiceService {
         return purchaseOrder != null ? InvoiceStateEnum.MATCHED : InvoiceStateEnum.RECEIVED;
     }
 
-    private MatchStatusEnum matchInvoiceLineToPOLineEngine(String poLinePublicId, CreateInvoiceLineRequest invoiceLine) {
+    private MatchStatusEnum matchInvoiceLineToPOLineEngine(String poLinePublicId, BigDecimal invoicePrice, BigDecimal invoiceQuantity) {
 
         PurchaseOrderLineT poLine = purchaseOrderLineService.findByPublicId(poLinePublicId);
-        BigDecimal invoiceLineTotal = invoiceLine.unitPrice()
-            .multiply(invoiceLine.quantity())
+        BigDecimal invoiceLineTotal = invoicePrice
+            .multiply(invoiceQuantity)
             .setScale(2, RoundingMode.HALF_UP);
 
-        if (poLine.getQuantity().compareTo(invoiceLine.quantity()) != 0 &&
-            poLine.getUnitPrice().compareTo(invoiceLine.unitPrice()) != 0) {
+        if (poLine.getQuantity().compareTo(invoiceQuantity) != 0 &&
+            poLine.getUnitPrice().compareTo(invoicePrice) != 0) {
             return MatchStatusEnum.BOTH_MISMATCH;
         }
 
-        if (poLine.getQuantity().compareTo(invoiceLine.quantity()) != 0) {
+        if (poLine.getQuantity().compareTo(invoiceQuantity) != 0) {
             return MatchStatusEnum.QUANTITY_MISMATCH;
         }
 
-        if (poLine.getUnitPrice().compareTo(invoiceLine.unitPrice()) != 0) {
+        if (poLine.getUnitPrice().compareTo(invoicePrice) != 0) {
             return MatchStatusEnum.PRICE_MISMATCH;
         }
 
@@ -251,4 +317,5 @@ public class InvoiceService {
             return BigDecimal.ZERO;
         }
     }
+
 }

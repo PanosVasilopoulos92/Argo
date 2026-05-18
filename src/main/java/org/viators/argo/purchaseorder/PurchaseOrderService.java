@@ -353,7 +353,7 @@ public class PurchaseOrderService {
 
     @Transactional(readOnly = true)
     public PurchaseOrderT getPurchaseOrder(String poPublicId) {
-        return purchaseOrderRepository.findPurchaseOrder(poPublicId)
+        return purchaseOrderRepository.findPurchaseOrderWithLinesAndSupplier(poPublicId)
             .orElseThrow(() -> new ResourceNotFoundException("PO", "publicId", poPublicId));
     }
 
