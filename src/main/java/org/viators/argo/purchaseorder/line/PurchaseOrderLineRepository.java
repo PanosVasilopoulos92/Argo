@@ -26,4 +26,6 @@ public interface PurchaseOrderLineRepository extends JpaRepository<PurchaseOrder
            and po.purchaseOrderState != org.viators.argo.purchaseorder.enums.PurchaseOrderStateEnum.CANCELLED
            """)
     List<PurchaseOrderLineT> findAllPOLinesForPOs(@Param("poIds") List<Long> poIds);
+
+
 }

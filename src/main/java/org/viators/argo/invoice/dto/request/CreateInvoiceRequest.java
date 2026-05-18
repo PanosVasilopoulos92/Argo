@@ -1,12 +1,7 @@
 package org.viators.argo.invoice.dto.request;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PastOrPresent;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import org.viators.argo.common.enums.CurrencyEnum;
 import org.viators.argo.invoice.InvoiceT;
 
@@ -19,6 +14,7 @@ public record CreateInvoiceRequest(
     @NotBlank(message = "Supplier publicId is required")
     String supplierPublicId,
 
+    @NotBlank(message = "Supplier invoice reference is required")
     @Size(max = 100, message = "Supplier invoice reference cannot exceed 100 characters")
     String supplierInvoiceReference,
 
@@ -26,6 +22,8 @@ public record CreateInvoiceRequest(
     @PastOrPresent(message = "Invoice date must be today or a past date")
     LocalDate invoiceDate,
 
+    @NotNull(message = "Invoice due date is required")
+    @FutureOrPresent(message = "Invoice due date must be in present or in a future date")
     LocalDate invoiceDueDate,
 
     @NotNull(message = "Currency is required")

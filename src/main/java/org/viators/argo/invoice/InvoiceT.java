@@ -30,13 +30,13 @@ public class InvoiceT extends BaseEntity {
     @Column(name = "invoice_number", nullable = false, updatable = false)
     private String invoiceNumber;
 
-    @Column(name = "supplier_inv_ref")
+    @Column(name = "supplier_inv_ref", nullable = false)
     private String supplierInvoiceReference;
 
     @Column(name = "invoice_date", nullable = false)
     private LocalDate invoiceDate;
 
-    @Column(name = "due_date")
+    @Column(name = "due_date", nullable = false)
     private LocalDate invoiceDueDate;
 
     @Enumerated(EnumType.STRING)
