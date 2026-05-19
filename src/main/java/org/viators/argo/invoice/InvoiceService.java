@@ -2,6 +2,9 @@ package org.viators.argo.invoice;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -15,8 +18,10 @@ import org.viators.argo.invoice.config.InvoiceToleranceProperties;
 import org.viators.argo.invoice.dto.request.AssociateInvoiceToPORequest;
 import org.viators.argo.invoice.dto.request.CreateInvoiceLineRequest;
 import org.viators.argo.invoice.dto.request.CreateInvoiceRequest;
+import org.viators.argo.invoice.dto.request.SearchInvoiceFilteredRequest;
 import org.viators.argo.invoice.dto.response.InvoiceDetailsResponse;
 import org.viators.argo.invoice.dto.response.InvoiceLineSummaryResponse;
+import org.viators.argo.invoice.dto.response.InvoiceSummaryResponse;
 import org.viators.argo.invoice.enums.InvoiceStateEnum;
 import org.viators.argo.invoice.enums.MatchStatusEnum;
 import org.viators.argo.invoice.line.InvoiceLineT;
@@ -88,6 +93,7 @@ public class InvoiceService {
         return InvoiceDetailsResponse.from(savedInvoice, responseLines);
     }
 
+    @Transactional
     public InvoiceDetailsResponse associateInvoiceToPO(String keycloakId, String invoicePublicId, AssociateInvoiceToPORequest request) {
         String loggedInUser = userService.getUser(keycloakId).getUsername();
 
@@ -140,6 +146,73 @@ public class InvoiceService {
             .toList();
 
         return InvoiceDetailsResponse.from(saved, responseLines);
+    }
+
+    // Read only methods
+    @Transactional(readOnly = true)
+    public InvoiceDetailsResponse getInvoice(String invoicePublicId) {
+        InvoiceT invoice = invoiceRepository.findInvoiceByPublicIdWithDetails(invoicePublicId)
+            .orElseThrow(() -> new ResourceNotFoundException("Invoice", "publicId", invoicePublicId));
+
+        List<InvoiceLineSummaryResponse> lineSummaries = invoice.getInvoiceLines().stream()
+            .map(InvoiceLineSummaryResponse::from)
+            .toList();
+
+        return InvoiceDetailsResponse.from(invoice, lineSummaries);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<InvoiceSummaryResponse> getInvoiceForPO(String poPublicId, Pageable pageable) {
+        return invoiceRepository.findByPurchaseOrder_PublicId(poPublicId, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<InvoiceSummaryResponse> getInvoicesFiltered(SearchInvoiceFilteredRequest filter, Pageable pageable) {
+        Specification<InvoiceT> specs =
+            (root, query, cb) -> cb.conjunction();
+
+        if (StringUtils.hasText(filter.invoiceNumber())) {
+            specs = specs.and(InvoiceSpecs.hasInvoiceNumber(filter.invoiceNumber()));
+        }
+
+        if (StringUtils.hasText(filter.supplierInvoiceReference())) {
+            specs = specs.and(InvoiceSpecs.hasSupplierInvoiceReference(filter.supplierInvoiceReference()));
+        }
+
+        if (StringUtils.hasText(filter.supplierPublicId())) {
+            specs = specs.and(InvoiceSpecs.hasSupplierPublicId(filter.supplierPublicId()));
+        }
+
+        if (StringUtils.hasText(filter.purchaseOrderPublicId())) {
+            specs = specs.and(InvoiceSpecs.hasPOPublicId(filter.purchaseOrderPublicId()));
+        }
+
+        if (filter.invoiceState() != null) {
+            specs = specs.and(InvoiceSpecs.hasInvoiceState(filter.invoiceState()));
+        }
+
+        if (filter.currency() != null) {
+            specs = specs.and(InvoiceSpecs.hasCurrency(filter.currency()));
+        }
+
+        specs = specs.and(InvoiceSpecs.hasInvoiceDateRange(filter.invoiceDateFrom(), filter.invoiceDateTo()));
+        specs = specs.and(InvoiceSpecs.hasDueDateRange(filter.invoiceDueDateFrom(), filter.invoiceDueDateTo()));
+        specs = specs.and(InvoiceSpecs.hasTotalAmountRange(filter.totalAmountMin(), filter.totalAmountMax()));
+
+        if (filter.hasUnmatchedLines()) {
+            specs = specs.and(InvoiceSpecs.hasUnmatchedLines());
+        }
+
+        if (filter.hasPriceDiscrepancy()) {
+            specs = specs.and(InvoiceSpecs.hasPriceDiscrepancy());
+        }
+
+        if (filter.hasQuantityDiscrepancy()) {
+            specs = specs.and(InvoiceSpecs.hasQuantityDiscrepancy());
+        }
+
+        return invoiceRepository.findAll(specs, pageable)
+            .map(InvoiceSummaryResponse::from);
     }
 
     // Private helper methods
