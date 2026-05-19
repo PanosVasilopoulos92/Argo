@@ -1,5 +1,6 @@
 package org.viators.argo.invoice;
 
+import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -15,10 +16,7 @@ import org.viators.argo.common.exceptions.InvalidStateException;
 import org.viators.argo.common.exceptions.ResourceNotFoundException;
 import org.viators.argo.goodsreceipt.GoodsReceiptService;
 import org.viators.argo.invoice.config.InvoiceToleranceProperties;
-import org.viators.argo.invoice.dto.request.AssociateInvoiceToPORequest;
-import org.viators.argo.invoice.dto.request.CreateInvoiceLineRequest;
-import org.viators.argo.invoice.dto.request.CreateInvoiceRequest;
-import org.viators.argo.invoice.dto.request.SearchInvoiceFilteredRequest;
+import org.viators.argo.invoice.dto.request.*;
 import org.viators.argo.invoice.dto.response.InvoiceDetailsResponse;
 import org.viators.argo.invoice.dto.response.InvoiceLineSummaryResponse;
 import org.viators.argo.invoice.dto.response.InvoiceSummaryResponse;
@@ -146,6 +144,25 @@ public class InvoiceService {
             .toList();
 
         return InvoiceDetailsResponse.from(saved, responseLines);
+    }
+
+    @Transactional
+    public void cancelInvoice(String keycloakId, String invoicePublicId, CancelInvoiceRequest request) {
+        InvoiceT invoice = loadResourceAndCheckVersion(invoicePublicId, request.version());
+        String loggedInUser = userService.getUser(keycloakId).getUsername();
+
+        switch (invoice.getInvoiceState()) {
+            case InvoiceStateEnum.APPROVED, InvoiceStateEnum.PAID, InvoiceStateEnum.CANCELLED ->
+                throw new InvalidStateException("Invoice is in state '%s' therefore it cannot get cancelled"
+                    .formatted(invoice.getInvoiceState()));
+        }
+
+        invoice.setInvoiceState(InvoiceStateEnum.CANCELLED);
+        invoice.setCancelledAt(Instant.now());
+        invoice.setCancelledBy(loggedInUser);
+        invoice.setCancellationReason(request.cancellationReason());
+
+        invoiceRepository.save(invoice);
     }
 
     // Read only methods
@@ -380,6 +397,17 @@ public class InvoiceService {
         }
 
         return line;
+    }
+
+    private InvoiceT loadResourceAndCheckVersion(String invoicePublicId, Long providedVersion) {
+        InvoiceT invoice = invoiceRepository.findByPublicId(invoicePublicId)
+            .orElseThrow(() -> new ResourceNotFoundException("Invoice", "publicId", invoicePublicId));
+
+        if (Objects.equals(invoice.getVersion(), providedVersion)) {
+            throw new OptimisticLockException("Another user has concurrently modified this resource. Please try again");
+        }
+
+        return invoice;
     }
 
 }
