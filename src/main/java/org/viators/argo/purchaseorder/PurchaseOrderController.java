@@ -14,6 +14,9 @@ import org.viators.argo.config.CurrentKeycloakId;
 import org.viators.argo.goodsreceipt.GoodsReceiptService;
 import org.viators.argo.goodsreceipt.GoodsReceiptT_;
 import org.viators.argo.goodsreceipt.dto.response.GoodsReceiptSummaryResponse;
+import org.viators.argo.invoice.InvoiceService;
+import org.viators.argo.invoice.InvoiceT_;
+import org.viators.argo.invoice.dto.response.InvoiceSummaryResponse;
 import org.viators.argo.purchaseorder.dto.request.*;
 import org.viators.argo.purchaseorder.dto.response.PODetailsResponse;
 import org.viators.argo.purchaseorder.dto.response.POSummaryResponse;
@@ -27,6 +30,7 @@ public class PurchaseOrderController {
 
     private final PurchaseOrderService purchaseOrderService;
     private final GoodsReceiptService goodsReceiptService;
+    private final InvoiceService invoiceService;
 
     @GetMapping("/{poPublicId}")
     public ResponseEntity<PODetailsResponse> getPO(
@@ -118,6 +122,17 @@ public class PurchaseOrderController {
     ) {
         return ResponseEntity.ok(
             goodsReceiptService.getReceiptsForPO(poPublicId, pageable)
+        );
+    }
+
+    @GetMapping("/{poPublicId}/invoices")
+    public ResponseEntity<Page<InvoiceSummaryResponse>> getInvoices(
+        @PathVariable String poPublicId,
+        @PageableDefault(sort = InvoiceT_.INVOICE_DATE, direction = Sort.Direction.DESC)
+        Pageable pageable
+    ) {
+        return ResponseEntity.ok(
+            invoiceService.getInvoiceForPO(poPublicId, pageable)
         );
     }
 }
