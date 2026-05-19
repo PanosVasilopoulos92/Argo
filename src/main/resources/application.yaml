@@ -76,3 +76,10 @@ keycloak:
     realm: argo-realm
     client-id: argo-api
     client-secret: ${KEYCLOAK_CLIENT_SECRET}
+
+# Values
+argo:
+  invoice:
+    match:
+      price-tolerance-percent: 2.0
+      quantity-tolerance-percent: 5.0

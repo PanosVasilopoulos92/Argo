@@ -19,5 +19,5 @@ public interface InvoiceRepository extends JpaRepository<InvoiceT, Long> {
 
     boolean existsBySupplierInvoiceReferenceAndSupplier_Id(String paymentReference, Long supplierId);
 
-    boolean existsByPublicIdAndPurchaseOrderIsNull(String id);
+    boolean existsByPublicIdAndPurchaseOrderIsNotNull(String id);
 }

@@ -11,6 +11,7 @@ import org.viators.argo.common.exceptions.DuplicateResourceException;
 import org.viators.argo.common.exceptions.InvalidStateException;
 import org.viators.argo.common.exceptions.ResourceNotFoundException;
 import org.viators.argo.goodsreceipt.GoodsReceiptService;
+import org.viators.argo.invoice.config.InvoiceToleranceProperties;
 import org.viators.argo.invoice.dto.request.AssociateInvoiceToPORequest;
 import org.viators.argo.invoice.dto.request.CreateInvoiceLineRequest;
 import org.viators.argo.invoice.dto.request.CreateInvoiceRequest;
@@ -24,18 +25,17 @@ import org.viators.argo.invoice.sequence.InvoiceSequenceT;
 import org.viators.argo.purchaseorder.PurchaseOrderService;
 import org.viators.argo.purchaseorder.PurchaseOrderT;
 import org.viators.argo.purchaseorder.enums.PurchaseOrderStateEnum;
-import org.viators.argo.purchaseorder.line.PurchaseOrderLineService;
 import org.viators.argo.purchaseorder.line.PurchaseOrderLineT;
 import org.viators.argo.supplier.SupplierService;
 import org.viators.argo.supplier.SupplierT;
 import org.viators.argo.user.UserService;
-import org.viators.argo.user.UserT;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -45,74 +45,47 @@ public class InvoiceService {
 
     private final InvoiceRepository invoiceRepository;
     private final PurchaseOrderService purchaseOrderService;
-    private final PurchaseOrderLineService purchaseOrderLineService;
     private final SupplierService supplierService;
     private final InvoiceSequenceRepository invoiceSequenceRepository;
     private final GoodsReceiptService goodsReceiptService;
+    private final InvoiceToleranceProperties matchToleranceProperties;
     private final UserService userService;
 
     @Transactional
     public InvoiceDetailsResponse create(CreateInvoiceRequest request) {
-        InvoiceT invoice = request.toEntity();
+        final String MATCH_MADE_BY_SYSTEM_AUTOMATICALLY = "SYSTEM";
+
         SupplierT supplier = supplierService.getActiveSupplier(request.supplierPublicId());
 
         validateCreate(request, supplier.getId());
 
-        PurchaseOrderT purchaseOrder = loadPOAndValidate(request.purchaseOrderPublicId(), supplier.getId(), request.currency());
-
+        InvoiceT invoice = request.toEntity();
+        invoice.setSupplier(supplier);
         invoice.setInvoiceNumber(generateInvoiceSequence());
-        invoice.setInvoiceState(matchInvoiceToPOEngine(purchaseOrder.getId()));
 
-        if (invoice.getInvoiceState() == InvoiceStateEnum.MATCHED) {
-            invoice.setMatchedAt(Instant.now());
-            invoice.setMatchedBy("SYSTEM");
+        PurchaseOrderT purchaseOrder = new PurchaseOrderT();
+        if (StringUtils.hasText(request.purchaseOrderPublicId())) {
+            purchaseOrder = loadPOAndValidate(request.purchaseOrderPublicId(), supplier.getId(), request.currency());
+            invoice.setPurchaseOrder(purchaseOrder);
+
         }
 
-        request.invoiceLines().forEach(invLineRequest -> {
-                InvoiceLineT invoiceLine = new InvoiceLineT();
+        for (CreateInvoiceLineRequest lineRequest : request.invoiceLines()) {
+            InvoiceLineT line = buildInvoiceLine(lineRequest, purchaseOrder);
+            invoice.addInvoiceLine(line);
+        }
 
-                BigDecimal invoiceLineTotal = invLineRequest.unitPrice()
-                    .multiply(invLineRequest.quantity())
-                    .setScale(2, RoundingMode.HALF_UP);
-
-                invoiceLine.setLineTotal(invoiceLineTotal);
-                invoiceLine.setUnitPrice(invLineRequest.unitPrice());
-                invoiceLine.setQuantity(invLineRequest.quantity());
-                invoiceLine.setDescription(invLineRequest.description());
-
-                if (invoice.getInvoiceState() == InvoiceStateEnum.MATCHED) {
-                    PurchaseOrderLineT poLine = purchaseOrderLineService.findByPublicId(invLineRequest.purchaseOrderLinePublicId());
-                    invoiceLine.setMatchStatus(matchInvoiceLineToPOLineEngine(
-                        poLine.getPublicId(), invLineRequest.unitPrice(), invLineRequest.quantity())
-                    );
-                    invoiceLine.setPriceVariance(calculatePriceVarianceBetweenPOLineAndInvoiceLine(
-                        poLine.getUnitPrice(), invLineRequest.unitPrice())
-                    );
-                    invoiceLine.setQuantityVariance(calculateQuantityVarianceBetweenPOLineAndInvoiceLine(
-                        poLine.getPublicId(), invLineRequest.quantity())
-                    );
-                    poLine.addInvoiceLine(invoiceLine);
-                }
-
-                invoice.addInvoiceLine(invoiceLine);
-            }
-        );
-
-        List<InvoiceLineT> notMatchedInvoiceLines = invoice.getInvoiceLines().stream()
-            .filter(invoiceLineT -> invoiceLineT.getMatchStatus() != MatchStatusEnum.MATCHED)
-            .toList();
-
-        if (!notMatchedInvoiceLines.isEmpty()) {
-            invoice.setInvoiceState(InvoiceStateEnum.DISPUTED);
+        if (purchaseOrder.getId() != null) {
+            runMatchAndSetState(invoice, MATCH_MADE_BY_SYSTEM_AUTOMATICALLY);
         }
 
         InvoiceT savedInvoice = invoiceRepository.save(invoice);
 
-        List<InvoiceLineSummaryResponse> invoiceLines = savedInvoice.getInvoiceLines().stream()
+        List<InvoiceLineSummaryResponse> responseLines = savedInvoice.getInvoiceLines().stream()
             .map(InvoiceLineSummaryResponse::from)
             .toList();
 
-        return InvoiceDetailsResponse.from(invoice, invoiceLines);
+        return InvoiceDetailsResponse.from(savedInvoice, responseLines);
     }
 
     public InvoiceDetailsResponse associateInvoiceToPO(String keycloakId, String invoicePublicId, AssociateInvoiceToPORequest request) {
@@ -121,57 +94,52 @@ public class InvoiceService {
         InvoiceT invoice = invoiceRepository.findByPublicIdWithLines(invoicePublicId)
             .orElseThrow(() -> new ResourceNotFoundException("Invoice", "publicId", invoicePublicId));
 
-        if (invoiceRepository.existsByPublicIdAndPurchaseOrderIsNull(invoicePublicId)) {
-            throw new BusinessValidationException("Invoice with publicId: %s is already associated with a PO"
-                .formatted(invoicePublicId));
+        if (invoice.getPurchaseOrder() != null) {
+            throw new BusinessValidationException(
+                "Invoice %s is already associated with PO %s"
+                    .formatted(invoicePublicId, invoice.getPurchaseOrder().getPublicId())
+            );
         }
 
         if (invoice.getInvoiceState() != InvoiceStateEnum.RECEIVED) {
             throw new BusinessValidationException("Invoice is not in state 'RECEIVED' and therefore it cannot get matched to a PO");
         }
 
-        Set<InvoiceLineT> invoiceLines = invoice.getInvoiceLines();
+        PurchaseOrderT po = loadPOAndValidate(
+            request.purchaseOrderPublicId(),
+            invoice.getSupplier().getId(),
+            invoice.getCurrency()
+        );
+        invoice.setPurchaseOrder(po);
 
-        PurchaseOrderT po = loadPOAndValidate(request.purchaseOrderPublicId(), invoice.getSupplier().getId(), invoice.getCurrency());
-        Set<PurchaseOrderLineT> poLines = po.getPoLines();
+        Map<String, PurchaseOrderLineT> poLinesByPublicId = po.getPoLines().stream()
+            .collect(Collectors.toMap(PurchaseOrderLineT::getPublicId, Function.identity()));
 
-        po.addInvoice(invoice);
+        Map<String, InvoiceLineT> invoiceLinesByPublicId = invoice.getInvoiceLines().stream()
+            .collect(Collectors.toMap(InvoiceLineT::getPublicId, Function.identity()));
 
         request.lineAssociations().forEach((invoiceLinePublicId, poLinePublicId) -> {
-            PurchaseOrderLineT poLine = poLines.stream()
-                .filter(line -> line.getPublicId().equals(poLinePublicId))
-                .findFirst()
-                .orElseThrow();
+            InvoiceLineT invoiceLine = Optional.ofNullable(invoiceLinesByPublicId.get(invoiceLinePublicId))
+                .orElseThrow(() -> new BusinessValidationException(
+                    "Invoice line %s not found on this invoice".formatted(invoiceLinePublicId)
+                ));
+            PurchaseOrderLineT poLine = Optional.ofNullable(poLinesByPublicId.get(poLinePublicId))
+                .orElseThrow(() -> new BusinessValidationException(
+                    "PO line %s does not belong to PO %s".formatted(poLinePublicId, po.getPublicId())
+                ));
 
-            InvoiceLineT invoiceLine = invoiceLines.stream()
-                .filter(line -> line.getPublicId().equals(invoiceLinePublicId))
-                .findFirst()
-                .orElseThrow();
-
-            invoiceLine.setMatchStatus(matchInvoiceLineToPOLineEngine(poLine.getPublicId(), invoiceLine.getUnitPrice(), invoiceLine.getQuantity()));
             poLine.addInvoiceLine(invoiceLine);
         });
 
-        List<InvoiceLineT> notMatchedInvoiceLines = invoice.getInvoiceLines().stream()
-            .filter(invoiceLineT -> invoiceLineT.getMatchStatus() != MatchStatusEnum.MATCHED)
-            .toList();
+        runMatchAndSetState(invoice, loggedInUser);
 
-        if (!notMatchedInvoiceLines.isEmpty()) {
-            invoice.setInvoiceState(InvoiceStateEnum.DISPUTED);
-        } else {
-            invoice.setInvoiceState(InvoiceStateEnum.MATCHED);
-        }
+        InvoiceT saved = invoiceRepository.save(invoice);
 
-        invoice.setMatchedAt(Instant.now());
-        invoice.setMatchedBy(loggedInUser);
-
-        InvoiceT savedInvoice = invoiceRepository.save(invoice);
-
-        List<InvoiceLineSummaryResponse> savedInvoiceLines = savedInvoice.getInvoiceLines().stream()
+        List<InvoiceLineSummaryResponse> responseLines = saved.getInvoiceLines().stream()
             .map(InvoiceLineSummaryResponse::from)
             .toList();
 
-        return InvoiceDetailsResponse.from(invoice, savedInvoiceLines);
+        return InvoiceDetailsResponse.from(saved, responseLines);
     }
 
     // Private helper methods
@@ -263,59 +231,82 @@ public class InvoiceService {
         return finalFormattedValue;
     }
 
-    private InvoiceStateEnum matchInvoiceToPOEngine(Long poDatabaseId) {
-        PurchaseOrderT purchaseOrder = purchaseOrderService.getActivePOByDatabaseId(poDatabaseId);
-        return purchaseOrder != null ? InvoiceStateEnum.MATCHED : InvoiceStateEnum.RECEIVED;
-    }
+    private MatchStatusEnum matchInvoiceLineToPOLine(InvoiceLineT invoiceLine, PurchaseOrderLineT poLine) {
+        BigDecimal totalReceivedQuantity = goodsReceiptService.computeTotalQuantityReceivedForPOLines(
+            poLine.getPublicId(), BigDecimal.ZERO
+        );
 
-    private MatchStatusEnum matchInvoiceLineToPOLineEngine(String poLinePublicId, BigDecimal invoicePrice, BigDecimal invoiceQuantity) {
+        BigDecimal pricePercent = computeVariancePercent(invoiceLine.getUnitPrice(), poLine.getUnitPrice());
+        BigDecimal quantityPercent = computeVariancePercent(invoiceLine.getQuantity(), totalReceivedQuantity);
 
-        PurchaseOrderLineT poLine = purchaseOrderLineService.findByPublicId(poLinePublicId);
-        BigDecimal invoiceLineTotal = invoicePrice
-            .multiply(invoiceQuantity)
-            .setScale(2, RoundingMode.HALF_UP);
+        invoiceLine.setPriceVariancePercent(pricePercent);
+        invoiceLine.setQuantityVariancePercent(quantityPercent);
 
-        if (poLine.getQuantity().compareTo(invoiceQuantity) != 0 &&
-            poLine.getUnitPrice().compareTo(invoicePrice) != 0) {
-            return MatchStatusEnum.BOTH_MISMATCH;
+        // no receipts -> Unmatched status for invoice line
+        if (quantityPercent == null) {
+            return MatchStatusEnum.UNMATCHED;
         }
 
-        if (poLine.getQuantity().compareTo(invoiceQuantity) != 0) {
+        boolean priceMismatch = pricePercent.abs().compareTo(matchToleranceProperties.priceTolerancePercent()) > 0;
+        boolean quantityMismatch = quantityPercent.abs().compareTo(matchToleranceProperties.quantityTolerancePercent()) > 0;
+
+        if (priceMismatch && quantityMismatch) {
+            return MatchStatusEnum.BOTH_MISMATCH;
+        }
+        if (priceMismatch) {
+            return MatchStatusEnum.PRICE_MISMATCH;
+        }
+        if (quantityMismatch) {
             return MatchStatusEnum.QUANTITY_MISMATCH;
         }
 
-        if (poLine.getUnitPrice().compareTo(invoicePrice) != 0) {
-            return MatchStatusEnum.PRICE_MISMATCH;
-        }
-
-        if (invoiceLineTotal.compareTo(poLine.getLineTotal()) == 0) {
-            return MatchStatusEnum.MATCHED;
-        }
-
-        return MatchStatusEnum.UNMATCHED;
+        return MatchStatusEnum.MATCHED;
     }
 
-    private BigDecimal calculatePriceVarianceBetweenPOLineAndInvoiceLine(BigDecimal poLineUnitPrice, BigDecimal invoiceLinePrice) {
-        if (poLineUnitPrice.compareTo(invoiceLinePrice) != 0) {
-            return poLineUnitPrice.compareTo(invoiceLinePrice) > 0
-                ? poLineUnitPrice.subtract(invoiceLinePrice)
-                : invoiceLinePrice.subtract(poLineUnitPrice);
-        } else {
-            return BigDecimal.ZERO;
+    private BigDecimal computeVariancePercent(BigDecimal actual, BigDecimal expected) {
+        if (expected == null || expected.compareTo(BigDecimal.ZERO) == 0) {
+            return null;
         }
 
+        return actual.subtract(expected)
+            .divide(expected, 4, RoundingMode.HALF_UP)
+            .multiply(BigDecimal.valueOf(100));
     }
 
-    private BigDecimal calculateQuantityVarianceBetweenPOLineAndInvoiceLine(String poLinePublicId, BigDecimal invoiceLineQuantity) {
-        BigDecimal receivedQuantity = goodsReceiptService.computeTotalQuantityReceivedForPOLines(poLinePublicId, BigDecimal.ZERO);
-
-        if (receivedQuantity.compareTo(invoiceLineQuantity) != 0) {
-            return receivedQuantity.compareTo(invoiceLineQuantity) > 0
-                ? receivedQuantity.subtract(invoiceLineQuantity)
-                : invoiceLineQuantity.subtract(receivedQuantity);
-        } else {
-            return BigDecimal.ZERO;
+    private void runMatchAndSetState(InvoiceT invoice, String loggedInUser) {
+        for (InvoiceLineT line : invoice.getInvoiceLines()) {
+            if (line.getPoLine() == null) {
+                line.setMatchStatus(MatchStatusEnum.UNMATCHED);
+                continue;
+            }
+            MatchStatusEnum lineStatus = matchInvoiceLineToPOLine(line, line.getPoLine());
+            line.setMatchStatus(lineStatus);
         }
+
+        boolean anyMismatch = invoice.getInvoiceLines().stream()
+            .anyMatch(l -> l.getMatchStatus() != MatchStatusEnum.MATCHED);
+
+        invoice.setInvoiceState(anyMismatch ? InvoiceStateEnum.DISPUTED : InvoiceStateEnum.MATCHED);
+        invoice.setMatchedAt(Instant.now());
+        invoice.setMatchedBy(loggedInUser);
+    }
+
+    private InvoiceLineT buildInvoiceLine(CreateInvoiceLineRequest request, PurchaseOrderT po) {
+        InvoiceLineT line = request.toEntity();
+
+        if (po != null && StringUtils.hasText(request.purchaseOrderLinePublicId())) {
+            PurchaseOrderLineT poLine = po.getPoLines().stream()
+                .filter(pl -> pl.getPublicId().equals(request.purchaseOrderLinePublicId()))
+                .findFirst()
+                .orElseThrow(() -> new BusinessValidationException(
+                    "PO line publicId %s does not belong to PO %s"
+                        .formatted(request.purchaseOrderLinePublicId(), po.getPublicId())
+                ));
+
+            poLine.addInvoiceLine(line);
+        }
+
+        return line;
     }
 
 }
