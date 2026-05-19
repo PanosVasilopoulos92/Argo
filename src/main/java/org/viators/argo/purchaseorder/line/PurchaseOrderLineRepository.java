@@ -14,18 +14,9 @@ import java.util.Optional;
 @Repository
 public interface PurchaseOrderLineRepository extends JpaRepository<PurchaseOrderLineT, Long> {
 
+    @EntityGraph(attributePaths = {"goodsReceiptLines"})
     Optional<PurchaseOrderLineT> findByPublicId(String publicId);
 
     @EntityGraph(attributePaths = {"goodsReceiptLines", "requisitionLine"})
     List<PurchaseOrderLineT> findAllByPublicIdIn(Collection<String> publicIds);
-
-    @Query("""
-           select pol from PurchaseOrderLineT pol
-           join pol.purchaseOrder po
-           where po.publicId in :poIds
-           and po.purchaseOrderState != org.viators.argo.purchaseorder.enums.PurchaseOrderStateEnum.CANCELLED
-           """)
-    List<PurchaseOrderLineT> findAllPOLinesForPOs(@Param("poIds") List<Long> poIds);
-
-
 }

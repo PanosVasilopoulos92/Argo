@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Size;
 import org.viators.argo.invoice.line.InvoiceLineT;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 public record CreateInvoiceLineRequest(
 
@@ -30,7 +31,8 @@ public record CreateInvoiceLineRequest(
         return InvoiceLineT.builder()
             .unitPrice(unitPrice)
             .quantity(quantity)
-            .lineTotal(unitPrice.multiply(quantity))
+            .lineTotal(unitPrice.multiply(quantity)
+                .setScale(2, RoundingMode.HALF_UP))
             .description(description)
             .build();
     }

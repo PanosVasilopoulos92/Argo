@@ -24,11 +24,6 @@ public class PurchaseOrderLineService {
     }
 
     @Transactional(readOnly = true)
-    public List<PurchaseOrderLineT> getPOLinesForProvidedPOs(List<Long> poIds) {
-        return purchaseOrderLineRepository.findAllPOLinesForPOs(poIds);
-    }
-
-    @Transactional(readOnly = true)
     public PurchaseOrderLineT findByPublicId(String poLinePublicId) {
         return purchaseOrderLineRepository.findByPublicId(poLinePublicId)
             .orElseThrow(() -> new ResourceNotFoundException("PO line", "publicId", poLinePublicId));

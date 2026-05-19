@@ -37,11 +37,11 @@ public class InvoiceLineT extends BaseEntity {
     @Builder.Default
     private MatchStatusEnum matchStatus = MatchStatusEnum.UNMATCHED;
 
-    @Column(name = "price_variance")
-    private BigDecimal priceVariance;
+    @Column(name = "price_variance_percent")
+    private BigDecimal priceVariancePercent;
 
-    @Column(name = "quantity_variance")
-    private BigDecimal quantityVariance;
+    @Column(name = "quantity_variance_percent")
+    private BigDecimal quantityVariancePercent;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "invoice_id", referencedColumnName = "id", nullable = false)
