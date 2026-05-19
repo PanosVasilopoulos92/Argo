@@ -11,6 +11,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.viators.argo.config.CurrentKeycloakId;
 import org.viators.argo.invoice.dto.request.AssociateInvoiceToPORequest;
+import org.viators.argo.invoice.dto.request.CancelInvoiceRequest;
 import org.viators.argo.invoice.dto.request.CreateInvoiceRequest;
 import org.viators.argo.invoice.dto.request.SearchInvoiceFilteredRequest;
 import org.viators.argo.invoice.dto.response.InvoiceDetailsResponse;
@@ -45,6 +46,16 @@ public class InvoiceController {
         return ResponseEntity.ok(
             invoiceService.associateInvoiceToPO(keycloakId, invoicePublicId, request)
         );
+    }
+
+    @PatchMapping("/{invoicePublicId}/cancel")
+    public ResponseEntity<Void> cancelInvoice(
+        @CurrentKeycloakId String keycloakId,
+        @PathVariable String invoicePublicId,
+        @Valid @RequestBody CancelInvoiceRequest request
+    ) {
+        invoiceService.cancelInvoice(keycloakId, invoicePublicId, request);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{invoicePublicId}")

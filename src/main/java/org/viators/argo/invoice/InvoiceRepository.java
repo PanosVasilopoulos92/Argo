@@ -24,6 +24,8 @@ public interface InvoiceRepository extends JpaRepository<InvoiceT, Long>, JpaSpe
     @NonNull
     Page<InvoiceT> findAll(@NonNull Specification<InvoiceT> spec, @NonNull Pageable pageable);
 
+    Optional<InvoiceT> findByPublicId(String publicId);
+
     @Query("""
            select i from InvoiceT i
            join fetch i.invoiceLines il
