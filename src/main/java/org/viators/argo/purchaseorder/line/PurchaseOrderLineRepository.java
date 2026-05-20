@@ -19,4 +19,6 @@ public interface PurchaseOrderLineRepository extends JpaRepository<PurchaseOrder
 
     @EntityGraph(attributePaths = {"goodsReceiptLines", "requisitionLine"})
     List<PurchaseOrderLineT> findAllByPublicIdIn(Collection<String> publicIds);
+
+    boolean existsByPublicIdInAndPurchaseOrder_Id(Collection<String> providedPOLineIds, Long poDatabaseId);
 }

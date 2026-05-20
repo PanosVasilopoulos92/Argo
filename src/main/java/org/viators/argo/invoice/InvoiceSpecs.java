@@ -102,8 +102,9 @@ public class InvoiceSpecs {
             sub.select(cb.literal(1L))
                 .where(
                     cb.equal(line.get(InvoiceLineT_.invoice), root),
-                    cb.isNull(line.get(InvoiceLineT_.poLine))
+                    cb.equal(line.get(InvoiceLineT_.matchStatus), MatchStatusEnum.UNMATCHED)
                 );
+
             return cb.exists(sub);
         };
     }
@@ -117,6 +118,7 @@ public class InvoiceSpecs {
                     cb.equal(line.get(InvoiceLineT_.invoice), root),
                     line.get(InvoiceLineT_.matchStatus).in(List.of(MatchStatusEnum.PRICE_MISMATCH, MatchStatusEnum.BOTH_MISMATCH))
                 );
+
             return cb.exists(sub);
         };
     }
@@ -130,6 +132,7 @@ public class InvoiceSpecs {
                     cb.equal(line.get(InvoiceLineT_.invoice), root),
                     line.get(InvoiceLineT_.matchStatus).in(List.of(MatchStatusEnum.QUANTITY_MISMATCH, MatchStatusEnum.BOTH_MISMATCH))
                 );
+
             return cb.exists(sub);
         };
     }

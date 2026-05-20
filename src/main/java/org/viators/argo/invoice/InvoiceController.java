@@ -10,10 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.viators.argo.config.CurrentKeycloakId;
-import org.viators.argo.invoice.dto.request.AssociateInvoiceToPORequest;
-import org.viators.argo.invoice.dto.request.CancelInvoiceRequest;
-import org.viators.argo.invoice.dto.request.CreateInvoiceRequest;
-import org.viators.argo.invoice.dto.request.SearchInvoiceFilteredRequest;
+import org.viators.argo.invoice.dto.request.*;
 import org.viators.argo.invoice.dto.response.DiscrepanciesSummaryResponse;
 import org.viators.argo.invoice.dto.response.InvoiceDetailsResponse;
 import org.viators.argo.invoice.dto.response.InvoiceDiscrepancyDetailsResponse;
@@ -60,6 +57,17 @@ public class InvoiceController {
     ) {
         invoiceService.cancelInvoice(keycloakId, invoicePublicId, request);
         return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize("hasRole('PROCUREMENT_MANAGER')")
+    @PatchMapping("/{invoicePublicId}/manual-match")
+    public ResponseEntity<InvoiceDetailsResponse> overrideMatchingMechanism(
+        @CurrentKeycloakId String keycloakId,
+        @PathVariable String invoicePublicId,
+        @Valid @RequestBody OverrideMatchMechanismRequest request
+    ) {
+        InvoiceDetailsResponse response = invoiceService.overrideMatchMechanism(keycloakId, invoicePublicId, request);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{invoicePublicId}")

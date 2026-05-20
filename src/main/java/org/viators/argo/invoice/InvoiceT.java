@@ -57,6 +57,9 @@ public class InvoiceT extends BaseEntity {
     @Column(name = "matched_by")
     private String matchedBy;
 
+    @Column(name = "ovveride_justification", length = 400)
+    private String overrideJustification;
+
     @Column(name = "cancelled_at")
     private Instant cancelledAt;
 

@@ -28,4 +28,9 @@ public class PurchaseOrderLineService {
         return purchaseOrderLineRepository.findByPublicId(poLinePublicId)
             .orElseThrow(() -> new ResourceNotFoundException("PO line", "publicId", poLinePublicId));
     }
+
+    @Transactional(readOnly = true)
+    public boolean hasPoLinesNotBelongingToCurrentPO(List<String> providedPOLineIds, Long poDatabaseId) {
+        return purchaseOrderLineRepository.existsByPublicIdInAndPurchaseOrder_Id(providedPOLineIds, poDatabaseId);
+    }
 }
