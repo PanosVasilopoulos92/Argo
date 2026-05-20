@@ -28,6 +28,7 @@ import org.viators.argo.invoice.sequence.InvoiceSequenceT;
 import org.viators.argo.purchaseorder.PurchaseOrderService;
 import org.viators.argo.purchaseorder.PurchaseOrderT;
 import org.viators.argo.purchaseorder.enums.PurchaseOrderStateEnum;
+import org.viators.argo.purchaseorder.line.PurchaseOrderLineService;
 import org.viators.argo.purchaseorder.line.PurchaseOrderLineT;
 import org.viators.argo.supplier.SupplierService;
 import org.viators.argo.supplier.SupplierT;
@@ -49,6 +50,7 @@ public class InvoiceService {
     private final InvoiceRepository invoiceRepository;
     private final InvoiceLineService invoiceLineService;
     private final PurchaseOrderService purchaseOrderService;
+    private final PurchaseOrderLineService purchaseOrderLineService;
     private final SupplierService supplierService;
     private final InvoiceSequenceRepository invoiceSequenceRepository;
     private final GoodsReceiptService goodsReceiptService;
@@ -57,6 +59,7 @@ public class InvoiceService {
 
     @Transactional
     public InvoiceDetailsResponse create(CreateInvoiceRequest request) {
+
         final String MATCH_MADE_BY_SYSTEM_AUTOMATICALLY = "SYSTEM";
 
         SupplierT supplier = supplierService.getActiveSupplier(request.supplierPublicId());
@@ -67,7 +70,7 @@ public class InvoiceService {
         invoice.setSupplier(supplier);
         invoice.setInvoiceNumber(generateInvoiceSequence());
 
-        PurchaseOrderT purchaseOrder = new PurchaseOrderT();
+        PurchaseOrderT purchaseOrder = null;
         if (StringUtils.hasText(request.purchaseOrderPublicId())) {
             purchaseOrder = loadPOAndValidate(request.purchaseOrderPublicId(), supplier.getId(), request.currency());
             invoice.setPurchaseOrder(purchaseOrder);
@@ -79,7 +82,7 @@ public class InvoiceService {
             invoice.addInvoiceLine(line);
         }
 
-        if (purchaseOrder.getId() != null) {
+        if (purchaseOrder != null) {
             runMatchAndSetState(invoice, MATCH_MADE_BY_SYSTEM_AUTOMATICALLY);
         }
 
@@ -94,10 +97,10 @@ public class InvoiceService {
 
     @Transactional
     public InvoiceDetailsResponse associateInvoiceToPO(String keycloakId, String invoicePublicId, AssociateInvoiceToPORequest request) {
+
         String loggedInUser = userService.getUser(keycloakId).getUsername();
 
-        InvoiceT invoice = invoiceRepository.findByPublicIdWithLines(invoicePublicId)
-            .orElseThrow(() -> new ResourceNotFoundException("Invoice", "publicId", invoicePublicId));
+        InvoiceT invoice = loadResourceAndCheckVersion(invoicePublicId, request.version());
 
         if (invoice.getPurchaseOrder() != null) {
             throw new BusinessValidationException(
@@ -149,6 +152,7 @@ public class InvoiceService {
 
     @Transactional
     public void cancelInvoice(String keycloakId, String invoicePublicId, CancelInvoiceRequest request) {
+
         InvoiceT invoice = loadResourceAndCheckVersion(invoicePublicId, request.version());
         String loggedInUser = userService.getUser(keycloakId).getUsername();
 
@@ -166,9 +170,73 @@ public class InvoiceService {
         invoiceRepository.save(invoice);
     }
 
+    @Transactional
+    public InvoiceDetailsResponse overrideMatchMechanism(String keycloakId, String invoicePubicId, OverrideMatchMechanismRequest request) {
+
+        InvoiceT invoice = loadResourceAndCheckVersion(invoicePubicId, request.version());
+        String loggedInUser = userService.getUser(keycloakId).getUsername();
+
+        validateInvoiceStateAndProvidedLines(invoice, request);
+
+        request.lineOverrides().forEach(override -> {
+                InvoiceLineT invoiceLine = invoiceLineService.getInvoiceLine(override.invoiceLinePublicId());
+                PurchaseOrderLineT poLine = purchaseOrderLineService.findByPublicId(override.poLinePublicId());
+                poLine.addInvoiceLine(invoiceLine);
+                invoiceLine.setMatchStatus(MatchStatusEnum.MATCHED);
+            }
+        );
+
+        boolean hasInvoiceLinesNotMatched = invoice.getInvoiceLines().stream()
+            .anyMatch(line -> line.getMatchStatus() != MatchStatusEnum.MATCHED);
+
+        if (!hasInvoiceLinesNotMatched) {
+            invoice.setMatchedAt(Instant.now());
+            invoice.setMatchedBy(loggedInUser);
+            invoice.setInvoiceState(InvoiceStateEnum.MATCHED);
+        }
+
+        invoice.setOverrideJustification(request.overrideJustification());
+        invoice = invoiceRepository.save(invoice);
+
+        List<InvoiceLineSummaryResponse> responseLines = invoice.getInvoiceLines().stream()
+            .map(InvoiceLineSummaryResponse::from)
+            .toList();
+
+        return InvoiceDetailsResponse.from(invoice, responseLines);
+    }
+
+    private void validateInvoiceStateAndProvidedLines(InvoiceT invoice, OverrideMatchMechanismRequest request) {
+        if (invoice.getInvoiceState() != InvoiceStateEnum.DISPUTED) {
+            throw new InvalidStateException("Invoice with public Id: %s is not in state 'DISPUTED'");
+        }
+
+        List<String> providedInvoiceLinesPublicIds = request.lineOverrides().stream()
+            .map(OverrideMatchMechanismRequest.LineOverrides::invoiceLinePublicId)
+            .toList();
+
+        List<String> providedPOLinesPublicIds = request.lineOverrides().stream()
+            .map(OverrideMatchMechanismRequest.LineOverrides::poLinePublicId)
+            .toList();
+
+        boolean hasInvoiceLinesNotBelongingToCurrentInvoice =
+            invoiceLineService.hasInvoiceLinesNotBelongingToCurrentInvoice(providedInvoiceLinesPublicIds, invoice.getId());
+
+        if (hasInvoiceLinesNotBelongingToCurrentInvoice) {
+            throw new BusinessValidationException("Found invoice lines that do not correspond in current invoice's PO");
+        }
+
+        boolean hasPoLinesNotBelongingToCurrentPO =
+            purchaseOrderLineService.hasPoLinesNotBelongingToCurrentPO(providedPOLinesPublicIds, invoice.getPurchaseOrder().getId());
+
+        if (hasPoLinesNotBelongingToCurrentPO) {
+            throw new BusinessValidationException("Found PO Lines that do not belong to current PO");
+        }
+    }
+
     // Read only methods
     @Transactional(readOnly = true)
     public InvoiceDetailsResponse getInvoice(String invoicePublicId) {
+
         InvoiceT invoice = invoiceRepository.findInvoiceByPublicIdWithDetails(invoicePublicId)
             .orElseThrow(() -> new ResourceNotFoundException("Invoice", "publicId", invoicePublicId));
 
@@ -186,6 +254,7 @@ public class InvoiceService {
 
     @Transactional(readOnly = true)
     public Page<InvoiceSummaryResponse> getInvoicesFiltered(SearchInvoiceFilteredRequest filter, Pageable pageable) {
+
         Specification<InvoiceT> specs =
             (root, query, cb) -> cb.conjunction();
 
@@ -240,11 +309,13 @@ public class InvoiceService {
 
     @Transactional(readOnly = true)
     public InvoiceDiscrepancyDetailsResponse getDiscrepancyInvoiceWithLineDetails(String invoicePublicId) {
+
         InvoiceT invoice = invoiceRepository.findByPublicIdWithLines(invoicePublicId)
             .orElseThrow(() -> new ResourceNotFoundException("Invoice", "publicId", invoicePublicId));
 
         if (invoice.getInvoiceState() != InvoiceStateEnum.DISPUTED) {
-            throw new InvalidStateException("Invoice with public Id: %s is not in state 'DISPUTED'");
+            throw new InvalidStateException("Invoice with public Id: %s is not in state 'DISPUTED'"
+                .formatted(invoicePublicId));
         }
 
         Set<InvoiceLineT> disputedLines = invoiceLineService.getByInvoiceWithPOLineAndReceipts(invoicePublicId);
@@ -255,18 +326,17 @@ public class InvoiceService {
                 BigDecimal totalReceivedQuantity = poLine.getGoodsReceiptLines().stream()
                     .map(GoodsReceiptLineT::getReceivedQuantity)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-                BigDecimal priceVariancePercentage = computeVariancePercent(l.getLineTotal(), poLine.getLineTotal());
 
                 String explanationFormatted = "";
                 if (l.getMatchStatus() == MatchStatusEnum.BOTH_MISMATCH ||
                     l.getMatchStatus() == MatchStatusEnum.PRICE_MISMATCH) {
-                    String currency = invoice.getCurrency().name();
+                    CurrencyEnum currency = invoice.getCurrency();
                     explanationFormatted = "Invoice line price %s%s differs from PO line price %s%s by %s%% (tolerance %s%%)"
-                        .formatted(currency,
-                            l.getLineTotal(),
-                            currency,
-                            poLine.getLineTotal(),
-                            priceVariancePercentage,
+                        .formatted(currency.getSymbol(),
+                            l.getUnitPrice(),
+                            currency.getSymbol(),
+                            poLine.getUnitPrice(),
+                            l.getPriceVariancePercent(),
                             matchToleranceProperties.priceTolerancePercent()
                         );
                 }
@@ -281,6 +351,7 @@ public class InvoiceService {
 
     // Private helper methods
     private void validateCreate(CreateInvoiceRequest request, Long supplierDatabaseId) {
+
         List<CreateInvoiceLineRequest> invoiceLines = request.invoiceLines();
 
         if (invoiceLines.size() != new HashSet<>(invoiceLines).size()) {
@@ -297,6 +368,7 @@ public class InvoiceService {
     }
 
     private void validateTotalAmountOfInvoice(CreateInvoiceRequest request) {
+
         BigDecimal computedTotal = request.invoiceLines().stream()
             .map(line -> line.unitPrice().multiply(line.quantity()))
             .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -330,6 +402,7 @@ public class InvoiceService {
     }
 
     private void validatePoLinesProvidedMatchPO(String poPublicId, List<CreateInvoiceLineRequest> providedInvoiceLines) {
+
         Set<String> providedPOLines = providedInvoiceLines.stream()
             .map(CreateInvoiceLineRequest::purchaseOrderLinePublicId)
             .collect(Collectors.toSet());
@@ -353,7 +426,9 @@ public class InvoiceService {
     }
 
     private String generateInvoiceSequence() {
+
         int currentYear = LocalDate.now().getYear();
+
         InvoiceSequenceT latestInvoiceSequence = invoiceSequenceRepository.findFirstByYearOrderByLastValueDesc(currentYear)
             .orElse(new InvoiceSequenceT(currentYear, 0L, null));
 
@@ -369,6 +444,7 @@ public class InvoiceService {
     }
 
     private MatchStatusEnum matchInvoiceLineToPOLine(InvoiceLineT invoiceLine, PurchaseOrderLineT poLine) {
+
         BigDecimal totalReceivedQuantity = goodsReceiptService.computeTotalQuantityReceivedForPOLines(
             poLine.getPublicId(), BigDecimal.ZERO
         );
@@ -401,6 +477,7 @@ public class InvoiceService {
     }
 
     private BigDecimal computeVariancePercent(BigDecimal actual, BigDecimal expected) {
+
         if (expected == null || expected.compareTo(BigDecimal.ZERO) == 0) {
             return null;
         }
@@ -411,6 +488,7 @@ public class InvoiceService {
     }
 
     private void runMatchAndSetState(InvoiceT invoice, String loggedInUser) {
+
         for (InvoiceLineT line : invoice.getInvoiceLines()) {
             if (line.getPoLine() == null) {
                 line.setMatchStatus(MatchStatusEnum.UNMATCHED);
@@ -429,6 +507,7 @@ public class InvoiceService {
     }
 
     private InvoiceLineT buildInvoiceLine(CreateInvoiceLineRequest request, PurchaseOrderT po) {
+
         InvoiceLineT line = request.toEntity();
 
         if (po != null && StringUtils.hasText(request.purchaseOrderLinePublicId())) {
@@ -447,10 +526,11 @@ public class InvoiceService {
     }
 
     private InvoiceT loadResourceAndCheckVersion(String invoicePublicId, Long providedVersion) {
+
         InvoiceT invoice = invoiceRepository.findByPublicId(invoicePublicId)
             .orElseThrow(() -> new ResourceNotFoundException("Invoice", "publicId", invoicePublicId));
 
-        if (Objects.equals(invoice.getVersion(), providedVersion)) {
+        if (!Objects.equals(invoice.getVersion(), providedVersion)) {
             throw new OptimisticLockException("Another user has concurrently modified this resource. Please try again");
         }
 

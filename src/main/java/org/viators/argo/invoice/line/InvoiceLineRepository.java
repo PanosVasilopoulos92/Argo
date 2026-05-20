@@ -5,6 +5,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
+import java.util.Optional;
 import java.util.Set;
 
 @Repository
@@ -19,4 +21,8 @@ public interface InvoiceLineRepository extends JpaRepository<InvoiceLineT, Long>
            and il.matchStatus <> org.viators.argo.invoice.enums.MatchStatusEnum.MATCHED
            """)
     Set<InvoiceLineT> findByInvoiceWithPOLineAndReceipts(@Param("invoicePublicId") String invoicePublicId);
+
+    boolean existsByPublicIdInAndInvoice_Id(Collection<String> publicIds, Long invoiceDatabaseId);
+
+    Optional<InvoiceLineT> findByPublicId(String publicId);
 }
