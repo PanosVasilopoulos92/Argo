@@ -14,10 +14,13 @@ import org.viators.argo.invoice.dto.request.AssociateInvoiceToPORequest;
 import org.viators.argo.invoice.dto.request.CancelInvoiceRequest;
 import org.viators.argo.invoice.dto.request.CreateInvoiceRequest;
 import org.viators.argo.invoice.dto.request.SearchInvoiceFilteredRequest;
+import org.viators.argo.invoice.dto.response.DiscrepanciesSummaryResponse;
 import org.viators.argo.invoice.dto.response.InvoiceDetailsResponse;
+import org.viators.argo.invoice.dto.response.InvoiceDiscrepancyDetailsResponse;
 import org.viators.argo.invoice.dto.response.InvoiceSummaryResponse;
 
 import java.net.URI;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/invoices")
@@ -48,6 +51,7 @@ public class InvoiceController {
         );
     }
 
+    @PreAuthorize("hasAnyRole('PROCUREMENT_CLERK', 'PROCUREMENT_MANAGER')")
     @PatchMapping("/{invoicePublicId}/cancel")
     public ResponseEntity<Void> cancelInvoice(
         @CurrentKeycloakId String keycloakId,
@@ -60,7 +64,9 @@ public class InvoiceController {
 
     @GetMapping("/{invoicePublicId}")
     public ResponseEntity<InvoiceDetailsResponse> getInvoice(@PathVariable String invoicePublicId) {
-        return ResponseEntity.ok(invoiceService.getInvoice(invoicePublicId));
+        return ResponseEntity.ok(
+            invoiceService.getInvoice(invoicePublicId)
+        );
     }
 
     @GetMapping("/filtered")
@@ -71,5 +77,21 @@ public class InvoiceController {
     ) {
         Page<InvoiceSummaryResponse> response = invoiceService.getInvoicesFiltered(filter, pageable);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/discrepancy-summary")
+    public ResponseEntity<List<DiscrepanciesSummaryResponse>> getDiscrepancySummaryByCurrency() {
+        return ResponseEntity.ok(
+            invoiceService.getDiscrepancySummaryByCurrency()
+        );
+    }
+
+    @GetMapping("/{invoicePublicId}/discrepancy-details")
+    public ResponseEntity<InvoiceDiscrepancyDetailsResponse> getDiscrepancyInvoiceWithLineDetails(
+        @PathVariable String invoicePublicId
+    ) {
+        return ResponseEntity.ok(
+            invoiceService.getDiscrepancyInvoiceWithLineDetails(invoicePublicId)
+        );
     }
 }

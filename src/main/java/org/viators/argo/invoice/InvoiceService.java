@@ -15,13 +15,13 @@ import org.viators.argo.common.exceptions.DuplicateResourceException;
 import org.viators.argo.common.exceptions.InvalidStateException;
 import org.viators.argo.common.exceptions.ResourceNotFoundException;
 import org.viators.argo.goodsreceipt.GoodsReceiptService;
+import org.viators.argo.goodsreceipt.line.GoodsReceiptLineT;
 import org.viators.argo.invoice.config.InvoiceToleranceProperties;
 import org.viators.argo.invoice.dto.request.*;
-import org.viators.argo.invoice.dto.response.InvoiceDetailsResponse;
-import org.viators.argo.invoice.dto.response.InvoiceLineSummaryResponse;
-import org.viators.argo.invoice.dto.response.InvoiceSummaryResponse;
+import org.viators.argo.invoice.dto.response.*;
 import org.viators.argo.invoice.enums.InvoiceStateEnum;
 import org.viators.argo.invoice.enums.MatchStatusEnum;
+import org.viators.argo.invoice.line.InvoiceLineService;
 import org.viators.argo.invoice.line.InvoiceLineT;
 import org.viators.argo.invoice.sequence.InvoiceSequenceRepository;
 import org.viators.argo.invoice.sequence.InvoiceSequenceT;
@@ -47,6 +47,7 @@ import java.util.stream.Collectors;
 public class InvoiceService {
 
     private final InvoiceRepository invoiceRepository;
+    private final InvoiceLineService invoiceLineService;
     private final PurchaseOrderService purchaseOrderService;
     private final SupplierService supplierService;
     private final InvoiceSequenceRepository invoiceSequenceRepository;
@@ -230,6 +231,52 @@ public class InvoiceService {
 
         return invoiceRepository.findAll(specs, pageable)
             .map(InvoiceSummaryResponse::from);
+    }
+
+    @Transactional(readOnly = true)
+    public List<DiscrepanciesSummaryResponse> getDiscrepancySummaryByCurrency() {
+        return invoiceRepository.findDiscrepancySummaryByCurrency();
+    }
+
+    @Transactional(readOnly = true)
+    public InvoiceDiscrepancyDetailsResponse getDiscrepancyInvoiceWithLineDetails(String invoicePublicId) {
+        InvoiceT invoice = invoiceRepository.findByPublicIdWithLines(invoicePublicId)
+            .orElseThrow(() -> new ResourceNotFoundException("Invoice", "publicId", invoicePublicId));
+
+        if (invoice.getInvoiceState() != InvoiceStateEnum.DISPUTED) {
+            throw new InvalidStateException("Invoice with public Id: %s is not in state 'DISPUTED'");
+        }
+
+        Set<InvoiceLineT> disputedLines = invoiceLineService.getByInvoiceWithPOLineAndReceipts(invoicePublicId);
+        List<DiscrepancyLineDetail> disputedInvoiceLinesDTOs = new ArrayList<>();
+
+        disputedLines.forEach(l -> {
+                PurchaseOrderLineT poLine = l.getPoLine();
+                BigDecimal totalReceivedQuantity = poLine.getGoodsReceiptLines().stream()
+                    .map(GoodsReceiptLineT::getReceivedQuantity)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+                BigDecimal priceVariancePercentage = computeVariancePercent(l.getLineTotal(), poLine.getLineTotal());
+
+                String explanationFormatted = "";
+                if (l.getMatchStatus() == MatchStatusEnum.BOTH_MISMATCH ||
+                    l.getMatchStatus() == MatchStatusEnum.PRICE_MISMATCH) {
+                    String currency = invoice.getCurrency().name();
+                    explanationFormatted = "Invoice line price %s%s differs from PO line price %s%s by %s%% (tolerance %s%%)"
+                        .formatted(currency,
+                            l.getLineTotal(),
+                            currency,
+                            poLine.getLineTotal(),
+                            priceVariancePercentage,
+                            matchToleranceProperties.priceTolerancePercent()
+                        );
+                }
+
+                DiscrepancyLineDetail lineDetail = DiscrepancyLineDetail.from(l, totalReceivedQuantity, explanationFormatted);
+                disputedInvoiceLinesDTOs.add(lineDetail);
+            }
+        );
+
+        return InvoiceDiscrepancyDetailsResponse.from(invoice, disputedInvoiceLinesDTOs);
     }
 
     // Private helper methods
