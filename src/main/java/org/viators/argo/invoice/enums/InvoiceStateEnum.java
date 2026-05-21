@@ -5,6 +5,7 @@ public enum InvoiceStateEnum {
     MATCHED,
     DISPUTED,
     APPROVED,
+    REJECTED,
     PAID,
     CANCELLED
 }

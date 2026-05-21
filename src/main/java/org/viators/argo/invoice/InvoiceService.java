@@ -225,9 +225,26 @@ public class InvoiceService {
         invoice.setApprovalNotes(request.approvalNotes());
         invoice.setInvoiceState(InvoiceStateEnum.APPROVED);
 
-        invoice = invoiceRepository.save(invoice);
+        return InvoiceSummaryResponse.from(invoiceRepository.save(invoice));
+    }
 
-        return InvoiceSummaryResponse.from(invoice);
+    @Transactional
+    public InvoiceSummaryResponse rejectInvoice(String keycloakId, String invoicePublicId, RejectInvoiceRequest request) {
+        InvoiceT invoice = loadResourceAndCheckVersion(invoicePublicId, request.version());
+        String loggedInUser = userService.getUser(keycloakId).getUsername();
+
+        if (invoice.getInvoiceState() != InvoiceStateEnum.MATCHED &&
+            invoice.getInvoiceState() != InvoiceStateEnum.DISPUTED) {
+            throw new BusinessValidationException("Only invoices in states: 'MATCHED' and 'DISPUTED' can be rejected." +
+                "Invoice with public Id: %s is in state '%s'".formatted(invoice.getPublicId(), invoice.getInvoiceState().name()));
+        }
+
+        invoice.setRejectedAt(Instant.now());
+        invoice.setRejectedBy(loggedInUser);
+        invoice.setRejectionReason(request.rejectionReason());
+        invoice.setInvoiceState(InvoiceStateEnum.REJECTED);
+
+        return InvoiceSummaryResponse.from(invoiceRepository.save(invoice));
     }
 
     // Read only methods
