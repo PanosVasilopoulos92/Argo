@@ -21,7 +21,7 @@ public interface InvoiceRepository extends JpaRepository<InvoiceT, Long>, JpaSpe
 
     boolean existsBySupplierInvoiceReferenceAndSupplier_Id(String paymentReference, Long supplierId);
 
-    @EntityGraph(attributePaths = {InvoiceT_.PURCHASE_ORDER, InvoiceT_.INVOICE_LINES})
+    @EntityGraph(attributePaths = {InvoiceT_.SUPPLIER, InvoiceT_.PURCHASE_ORDER, InvoiceT_.INVOICE_LINES})
     Optional<InvoiceT> findByPublicId(String publicId);
 
     @EntityGraph(attributePaths = {InvoiceT_.SUPPLIER, InvoiceT_.PURCHASE_ORDER})

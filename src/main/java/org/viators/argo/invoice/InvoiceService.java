@@ -205,32 +205,29 @@ public class InvoiceService {
         return InvoiceDetailsResponse.from(invoice, responseLines);
     }
 
-    private void validateInvoiceStateAndProvidedLines(InvoiceT invoice, OverrideMatchMechanismRequest request) {
-        if (invoice.getInvoiceState() != InvoiceStateEnum.DISPUTED) {
-            throw new InvalidStateException("Invoice with public Id: %s is not in state 'DISPUTED'");
+    @Transactional
+    public InvoiceSummaryResponse approveInvoice(String keycloakId, String invoicePublicId, ApproveInvoiceRequest request) {
+        InvoiceT invoice = loadResourceAndCheckVersion(invoicePublicId, request.version());
+        String loggedInUser = userService.getUser(keycloakId).getUsername();
+
+        if (invoice.getInvoiceState() != InvoiceStateEnum.MATCHED &&
+            invoice.getInvoiceState() != InvoiceStateEnum.DISPUTED) {
+            throw new BusinessValidationException("Only invoices in states: 'MATCHED' and 'DISPUTED' can be approved." +
+                "Invoice with public Id: %s is in state '%s'".formatted(invoice.getPublicId(), invoice.getInvoiceState().name()));
         }
 
-        List<String> providedInvoiceLinesPublicIds = request.lineOverrides().stream()
-            .map(OverrideMatchMechanismRequest.LineOverrides::invoiceLinePublicId)
-            .toList();
-
-        List<String> providedPOLinesPublicIds = request.lineOverrides().stream()
-            .map(OverrideMatchMechanismRequest.LineOverrides::poLinePublicId)
-            .toList();
-
-        boolean hasInvoiceLinesNotBelongingToCurrentInvoice =
-            invoiceLineService.hasInvoiceLinesNotBelongingToCurrentInvoice(providedInvoiceLinesPublicIds, invoice.getId());
-
-        if (hasInvoiceLinesNotBelongingToCurrentInvoice) {
-            throw new BusinessValidationException("Found invoice lines that do not correspond in current invoice's PO");
+        if (invoice.getCreatedBy().equals(loggedInUser)) {
+            throw new BusinessValidationException("Approver cannot be the same person with the one that created the invoice");
         }
 
-        boolean hasPoLinesNotBelongingToCurrentPO =
-            purchaseOrderLineService.hasPoLinesNotBelongingToCurrentPO(providedPOLinesPublicIds, invoice.getPurchaseOrder().getId());
+        invoice.setApprovedAt(Instant.now());
+        invoice.setApprovedBy(loggedInUser);
+        invoice.setApprovalNotes(request.approvalNotes());
+        invoice.setInvoiceState(InvoiceStateEnum.APPROVED);
 
-        if (hasPoLinesNotBelongingToCurrentPO) {
-            throw new BusinessValidationException("Found PO Lines that do not belong to current PO");
-        }
+        invoice = invoiceRepository.save(invoice);
+
+        return InvoiceSummaryResponse.from(invoice);
     }
 
     // Read only methods
@@ -535,6 +532,34 @@ public class InvoiceService {
         }
 
         return invoice;
+    }
+
+    private void validateInvoiceStateAndProvidedLines(InvoiceT invoice, OverrideMatchMechanismRequest request) {
+        if (invoice.getInvoiceState() != InvoiceStateEnum.DISPUTED) {
+            throw new InvalidStateException("Invoice with public Id: %s is not in state 'DISPUTED'");
+        }
+
+        List<String> providedInvoiceLinesPublicIds = request.lineOverrides().stream()
+            .map(OverrideMatchMechanismRequest.LineOverrides::invoiceLinePublicId)
+            .toList();
+
+        List<String> providedPOLinesPublicIds = request.lineOverrides().stream()
+            .map(OverrideMatchMechanismRequest.LineOverrides::poLinePublicId)
+            .toList();
+
+        boolean hasInvoiceLinesNotBelongingToCurrentInvoice =
+            invoiceLineService.hasInvoiceLinesNotBelongingToCurrentInvoice(providedInvoiceLinesPublicIds, invoice.getId());
+
+        if (hasInvoiceLinesNotBelongingToCurrentInvoice) {
+            throw new BusinessValidationException("Found invoice lines that do not correspond in current invoice's PO");
+        }
+
+        boolean hasPoLinesNotBelongingToCurrentPO =
+            purchaseOrderLineService.hasPoLinesNotBelongingToCurrentPO(providedPOLinesPublicIds, invoice.getPurchaseOrder().getId());
+
+        if (hasPoLinesNotBelongingToCurrentPO) {
+            throw new BusinessValidationException("Found PO Lines that do not belong to current PO");
+        }
     }
 
 }
