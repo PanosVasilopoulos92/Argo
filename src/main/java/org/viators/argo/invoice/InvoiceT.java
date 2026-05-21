@@ -90,11 +90,11 @@ public class InvoiceT extends BaseEntity {
     @Column(name = "rejection_reason", length = 500)
     private String rejectionReason;
 
-    @Column(name = "paid_at")
-    private Instant paidAt;
+    @Column(name = "record_payment_at")
+    private Instant recordedPaymentAt;
 
     @Column(name = "paid_by")
-    private String paidBy;
+    private String recordedPaymentBy;
 
     @Column(name = "payment_reference")
     private String paymentReference;

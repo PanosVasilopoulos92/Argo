@@ -92,6 +92,17 @@ public class InvoiceController {
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("hasRole('FINANCE_APPROVER')")
+    @PatchMapping("/{invoicePublicId}/record-payment")
+    public ResponseEntity<InvoiceSummaryResponse> recordPayment(
+        @CurrentKeycloakId String keycloakId,
+        @PathVariable String invoicePublicId,
+        @Valid @RequestBody RecordPaymentRequest request
+    ) {
+        InvoiceSummaryResponse response = invoiceService.recordPaymentForInvoice(keycloakId, invoicePublicId, request);
+        return ResponseEntity.ok(response);
+    }
+
 
     @GetMapping("/{invoicePublicId}")
     public ResponseEntity<InvoiceDetailsResponse> getInvoice(@PathVariable String invoicePublicId) {
