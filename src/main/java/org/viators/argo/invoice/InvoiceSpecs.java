@@ -137,4 +137,11 @@ public class InvoiceSpecs {
         };
     }
 
+    public static Specification<InvoiceT> hasDueWithinDays(Long dueWithinDays) {
+        return (root, query, cb) -> {
+            LocalDate dueDate = LocalDate.now().plusDays(dueWithinDays);
+            return cb.lessThanOrEqualTo(root.get(InvoiceT_.invoiceDueDate), dueDate);
+        };
+    }
+
 }

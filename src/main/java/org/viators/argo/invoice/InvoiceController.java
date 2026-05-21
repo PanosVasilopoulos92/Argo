@@ -18,6 +18,7 @@ import org.viators.argo.invoice.dto.response.InvoiceSummaryResponse;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/invoices")
@@ -103,7 +104,6 @@ public class InvoiceController {
         return ResponseEntity.ok(response);
     }
 
-
     @GetMapping("/{invoicePublicId}")
     public ResponseEntity<InvoiceDetailsResponse> getInvoice(@PathVariable String invoicePublicId) {
         return ResponseEntity.ok(
@@ -135,5 +135,12 @@ public class InvoiceController {
         return ResponseEntity.ok(
             invoiceService.getDiscrepancyInvoiceWithLineDetails(invoicePublicId)
         );
+    }
+
+    @GetMapping("/outstanding")
+    public ResponseEntity<Map<String, List<InvoiceSummaryResponse>>> getAwaitingActionInvoices(
+        @Valid @ModelAttribute SearchAwaitingActionInvoicesFiltered filter
+    ) {
+        return ResponseEntity.ok(invoiceService.getAwaitingActionInvoicesFiltered(filter));
     }
 }

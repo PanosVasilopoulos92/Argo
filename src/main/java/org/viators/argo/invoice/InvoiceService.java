@@ -389,6 +389,76 @@ public class InvoiceService {
         return InvoiceDiscrepancyDetailsResponse.from(invoice, disputedInvoiceLinesDTOs);
     }
 
+    public Map<String, List<InvoiceSummaryResponse>> getAwaitingActionInvoicesFiltered(SearchAwaitingActionInvoicesFiltered filter) {
+        Map<String, List<InvoiceSummaryResponse>> response = new HashMap<>();
+
+        Specification<InvoiceT> specs = (root, query, cb) -> cb.conjunction();
+
+        if (StringUtils.hasText(filter.supplierPublicId())) {
+            specs = specs.and(InvoiceSpecs.hasSupplierPublicId(filter.supplierPublicId()));
+        }
+
+        if (filter.currency() != null) {
+            specs = specs.and(InvoiceSpecs.hasCurrency(filter.currency()));
+        }
+
+        if (filter.dueWithinDays() != null) {
+            specs = specs.and(InvoiceSpecs.hasDueWithinDays(filter.dueWithinDays()));
+        }
+
+        if (!filter.isEmpty()) {
+            List<InvoiceT> results = invoiceRepository.findAll(specs);
+
+            List<InvoiceSummaryResponse> awaitingApproval = results.stream()
+                .filter(invoice -> invoice.getInvoiceState() == InvoiceStateEnum.MATCHED ||
+                    invoice.getInvoiceState() == InvoiceStateEnum.DISPUTED)
+                .map(InvoiceSummaryResponse::from)
+                .toList();
+            response.put("Awaiting Approval", awaitingApproval);
+
+            List<InvoiceSummaryResponse> awaitingPayment = results.stream()
+                .filter(invoice -> invoice.getInvoiceState() == InvoiceStateEnum.APPROVED)
+                .map(InvoiceSummaryResponse::from)
+                .toList();
+            response.put("Awaiting Payment", awaitingPayment);
+
+            List<InvoiceSummaryResponse> overdue = results.stream()
+                .filter(invoice ->
+                    invoice.getInvoiceState() == InvoiceStateEnum.MATCHED ||
+                        invoice.getInvoiceState() == InvoiceStateEnum.DISPUTED ||
+                        invoice.getInvoiceState() == InvoiceStateEnum.APPROVED
+                )
+                .filter(invoice -> invoice.getInvoiceDueDate().isAfter(LocalDate.now()))
+                .map(InvoiceSummaryResponse::from)
+                .toList();
+            response.put("Overdue", overdue);
+        } else {
+            List<InvoiceSummaryResponse> awaitingApproval = invoiceRepository.findAllByInvoiceStateIn(
+                    List.of(InvoiceStateEnum.DISPUTED, InvoiceStateEnum.MATCHED)
+                ).stream()
+                .map(InvoiceSummaryResponse::from)
+                .toList();
+            response.put("Awaiting Approval", awaitingApproval);
+
+            List<InvoiceSummaryResponse> awaitingPayment = invoiceRepository.findAllByInvoiceState(InvoiceStateEnum.APPROVED)
+                .stream()
+                .map(InvoiceSummaryResponse::from)
+                .toList();
+            response.put("Awaiting Payment", awaitingPayment);
+
+            List<InvoiceSummaryResponse> overdue = invoiceRepository.findOverdueInvoices(
+                    List.of(InvoiceStateEnum.DISPUTED, InvoiceStateEnum.MATCHED, InvoiceStateEnum.APPROVED),
+                    LocalDate.now()
+                )
+                .stream()
+                .map(InvoiceSummaryResponse::from)
+                .toList();
+            response.put("Overdue", overdue);
+        }
+
+        return response;
+    }
+
     // Private helper methods
     private void validateCreate(CreateInvoiceRequest request, Long supplierDatabaseId) {
 

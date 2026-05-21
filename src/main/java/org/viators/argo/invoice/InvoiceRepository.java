@@ -3,6 +3,7 @@ package org.viators.argo.invoice;
 import org.jspecify.annotations.NonNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.PredicateSpecification;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,7 +13,10 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.viators.argo.invoice.dto.response.DiscrepanciesSummaryResponse;
 import org.viators.argo.invoice.dto.response.InvoiceSummaryResponse;
+import org.viators.argo.invoice.enums.InvoiceStateEnum;
 
+import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,6 +26,12 @@ public interface InvoiceRepository extends JpaRepository<InvoiceT, Long>, JpaSpe
     boolean existsBySupplierInvoiceReferenceAndSupplier_Id(String paymentReference, Long supplierId);
 
     boolean existsByPaymentReferenceAndSupplier_Id(String paymentReference, Long supplierId);
+
+    @EntityGraph(attributePaths = {InvoiceT_.SUPPLIER, InvoiceT_.PURCHASE_ORDER})
+    List<InvoiceT> findAllByInvoiceStateIn(List<InvoiceStateEnum> invoiceStates);
+
+    @EntityGraph(attributePaths = {InvoiceT_.SUPPLIER, InvoiceT_.PURCHASE_ORDER})
+    List<InvoiceT> findAllByInvoiceState(InvoiceStateEnum invoiceState);
 
     @EntityGraph(attributePaths = {InvoiceT_.SUPPLIER, InvoiceT_.PURCHASE_ORDER, InvoiceT_.INVOICE_LINES})
     Optional<InvoiceT> findByPublicId(String publicId);
@@ -33,6 +43,11 @@ public interface InvoiceRepository extends JpaRepository<InvoiceT, Long>, JpaSpe
     @EntityGraph(attributePaths = {InvoiceT_.SUPPLIER, InvoiceT_.PURCHASE_ORDER})
     @NonNull
     Page<InvoiceT> findAll(@NonNull Specification<InvoiceT> spec, @NonNull Pageable pageable);
+
+    @Override
+    @EntityGraph(attributePaths = {InvoiceT_.SUPPLIER, InvoiceT_.PURCHASE_ORDER})
+    @NonNull
+    List<InvoiceT> findAll(@NonNull Specification<InvoiceT> spec);
 
     @Query("""
         select i from InvoiceT i
@@ -67,4 +82,14 @@ public interface InvoiceRepository extends JpaRepository<InvoiceT, Long>, JpaSpe
         order by l.invoice.currency
         """)
     List<DiscrepanciesSummaryResponse> findDiscrepancySummaryByCurrency();
+
+    @Query("""
+           select i from InvoiceT i
+           left join fetch i.supplier s
+           left join fetch i.purchaseOrder po
+           where i.invoiceState in :states
+           and i.invoiceDueDate < :today
+           """)
+    List<InvoiceT> findOverdueInvoices(@Param("states") List<InvoiceStateEnum> states,
+                                       @Param("today") LocalDate today);
 }
