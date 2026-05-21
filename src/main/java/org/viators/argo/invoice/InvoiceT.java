@@ -78,6 +78,9 @@ public class InvoiceT extends BaseEntity {
     @Column(name = "approved_by")
     private String approvedBy;
 
+    @Column(name = "approval_notes", length = 500)
+    private String approvalNotes;
+
     @Column(name = "rejected_at")
     private Instant rejectedAt;
 

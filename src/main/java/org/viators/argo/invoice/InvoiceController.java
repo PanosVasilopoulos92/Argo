@@ -70,6 +70,16 @@ public class InvoiceController {
         return ResponseEntity.ok(response);
     }
 
+    @PatchMapping("/{invoicePublicId}/approve")
+    public ResponseEntity<InvoiceSummaryResponse> approveInvoice(
+        @CurrentKeycloakId String keycloakId,
+        @PathVariable String invoicePublicId,
+        @Valid @RequestBody ApproveInvoiceRequest request
+    ) {
+        InvoiceSummaryResponse response = invoiceService.approveInvoice(keycloakId, invoicePublicId, request);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/{invoicePublicId}")
     public ResponseEntity<InvoiceDetailsResponse> getInvoice(@PathVariable String invoicePublicId) {
         return ResponseEntity.ok(
