@@ -247,6 +247,32 @@ public class InvoiceService {
         return InvoiceSummaryResponse.from(invoiceRepository.save(invoice));
     }
 
+    @Transactional
+    public InvoiceSummaryResponse recordPaymentForInvoice(String keycloakId, String invoicePublicId, RecordPaymentRequest request) {
+        InvoiceT invoice = loadResourceAndCheckVersion(invoicePublicId, request.version());
+        String loggedInUser = userService.getUser(keycloakId).getUsername();
+
+        if (invoice.getInvoiceState() != InvoiceStateEnum.APPROVED) {
+            throw new BusinessValidationException("Invoice with public Id: %s is not in state 'APPROVED' and therefore"
+                .formatted(invoicePublicId) +
+                " a payment cannot recorded for it");
+        }
+
+        if (invoiceRepository.existsByPaymentReferenceAndSupplier_Id(request.paymentReference(), invoice.getSupplier().getId())) {
+            throw new DuplicateResourceException("Found same payment reference (%s) for the same supplier. Please check and retry"
+                .formatted(request.paymentReference()));
+        }
+
+        invoice.setPaymentDate(request.paymentDate());
+        invoice.setRecordedPaymentAt(Instant.now());
+        invoice.setRecordedPaymentBy(loggedInUser);
+        invoice.setPaymentReference(request.paymentReference());
+        invoice.setPaymentMethod(request.paymentMethod());
+        invoice.setInvoiceState(InvoiceStateEnum.PAID);
+
+        return InvoiceSummaryResponse.from(invoiceRepository.save(invoice));
+    }
+
     // Read only methods
     @Transactional(readOnly = true)
     public InvoiceDetailsResponse getInvoice(String invoicePublicId) {
