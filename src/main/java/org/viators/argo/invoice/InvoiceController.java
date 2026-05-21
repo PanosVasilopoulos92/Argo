@@ -70,6 +70,7 @@ public class InvoiceController {
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("hasRole('FINANCE_APPROVER')")
     @PatchMapping("/{invoicePublicId}/approve")
     public ResponseEntity<InvoiceSummaryResponse> approveInvoice(
         @CurrentKeycloakId String keycloakId,
@@ -79,6 +80,18 @@ public class InvoiceController {
         InvoiceSummaryResponse response = invoiceService.approveInvoice(keycloakId, invoicePublicId, request);
         return ResponseEntity.ok(response);
     }
+
+    @PreAuthorize("hasRole('FINANCE_APPROVER')")
+    @PatchMapping("/{invoicePublicId}/reject")
+    public ResponseEntity<InvoiceSummaryResponse> rejectInvoice(
+        @CurrentKeycloakId String keycloakId,
+        @PathVariable String invoicePublicId,
+        @Valid @RequestBody RejectInvoiceRequest request
+    ) {
+        InvoiceSummaryResponse response = invoiceService.rejectInvoice(keycloakId, invoicePublicId, request);
+        return ResponseEntity.ok(response);
+    }
+
 
     @GetMapping("/{invoicePublicId}")
     public ResponseEntity<InvoiceDetailsResponse> getInvoice(@PathVariable String invoicePublicId) {

@@ -87,7 +87,7 @@ public class InvoiceT extends BaseEntity {
     @Column(name = "rejected_by")
     private String rejectedBy;
 
-    @Column(name = "rejection_reason")
+    @Column(name = "rejection_reason", length = 500)
     private String rejectionReason;
 
     @Column(name = "paid_at")
