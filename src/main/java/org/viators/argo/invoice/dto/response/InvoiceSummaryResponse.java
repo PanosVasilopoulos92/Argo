@@ -8,6 +8,7 @@ import org.viators.argo.invoice.enums.InvoiceStateEnum;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 
 @Builder
 public record InvoiceSummaryResponse(
@@ -24,7 +25,8 @@ public record InvoiceSummaryResponse(
     String poPublicId,
     String poNumber,
     Instant createdAt,
-    String createdBy
+    String createdBy,
+    Long daysUntilDue
 ) {
 
     public static InvoiceSummaryResponse from(InvoiceT entity) {
@@ -43,6 +45,7 @@ public record InvoiceSummaryResponse(
             .poNumber(entity.getPurchaseOrder() != null ? entity.getPurchaseOrder().getPurchaseOrderNumber() : null)
             .createdAt(entity.getCreatedAt())
             .createdBy(entity.getCreatedBy())
+            .daysUntilDue(ChronoUnit.DAYS.between(LocalDate.now(), entity.getInvoiceDueDate()))
             .build();
     }
 }
