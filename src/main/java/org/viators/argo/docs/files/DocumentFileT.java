@@ -27,6 +27,9 @@ public class DocumentFileT extends BaseEntity {
     @Column(name = "content_type", nullable = false)
     private String contentType;
 
+    @Column(name = "storage_key", nullable = false, unique = true, length = 100)
+    private String storageKey;
+
     @Column(name = "original_filename", nullable = false)
     private String originalFilename;
 

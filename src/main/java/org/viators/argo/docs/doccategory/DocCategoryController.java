@@ -3,8 +3,10 @@ package org.viators.argo.docs.doccategory;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.viators.argo.docs.doccategory.dto.request.CreateDocCategoryRequest;
+import org.viators.argo.docs.doccategory.dto.request.UpdateDocCategoryRequest;
 import org.viators.argo.docs.doccategory.dto.response.DocCategoryDetailsResponse;
 
 import java.net.URI;
@@ -17,6 +19,7 @@ public class DocCategoryController {
 
     private final DocCategoryService docCategoryService;
 
+    @PreAuthorize("hasRole('DOC_ADMIN')")
     @PostMapping
     public ResponseEntity<DocCategoryDetailsResponse> create(
         @Valid @RequestBody CreateDocCategoryRequest request
@@ -27,6 +30,17 @@ public class DocCategoryController {
             .body(response);
     }
 
+    @PatchMapping("/{docCategoryPublicId}/update")
+    public ResponseEntity<DocCategoryDetailsResponse> update(
+        @PathVariable String docCategoryPublicId,
+        @Valid @RequestBody UpdateDocCategoryRequest request
+    ) {
+        return ResponseEntity.ok(
+            docCategoryService.update(docCategoryPublicId, request)
+        );
+    }
+
+    @PreAuthorize("hasRole('DOC_ADMIN')")
     @DeleteMapping("/{docCategoryPublicId}")
     public ResponseEntity<Void> delete(@PathVariable String docCategoryPublicId) {
         docCategoryService.delete(docCategoryPublicId);

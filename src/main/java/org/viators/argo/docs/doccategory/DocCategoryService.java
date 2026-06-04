@@ -55,7 +55,7 @@ public class DocCategoryService {
         DocCategoryT docCategory = docCategoryRepository.findByPublicId(docCategoryPublicId)
             .orElseThrow(() -> new ResourceNotFoundException("DocCategory", "publicId", docCategoryPublicId));
 
-        if (!docCategoryRepository.existsByIdAndDocumentFilesNotEmpty(docCategory.getId())) {
+        if (docCategoryRepository.existsByIdAndDocumentFilesNotEmpty(docCategory.getId())) {
             throw new InvalidStateException("Doc category with publicId: %s contains files and cannot be deleted."
                 .formatted(docCategoryPublicId));
         }
@@ -77,6 +77,12 @@ public class DocCategoryService {
             .orElseThrow(() -> new ResourceNotFoundException("DocCategory", "publicId", docCategoryPublicId));
 
         return DocCategoryDetailsResponse.from(docCategory);
+    }
+
+    public DocCategoryT getDocCategoryResourceByPublicId(String docCategoryPublicId) {
+        return docCategoryRepository.findByPublicId(docCategoryPublicId)
+            .orElseThrow(() -> new ResourceNotFoundException("DocCategory", "publicId", docCategoryPublicId));
+
     }
 
     // Private helper methods

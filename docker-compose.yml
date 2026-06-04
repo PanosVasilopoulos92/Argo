@@ -46,6 +46,7 @@ services:
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
+      ARGO_DOC_STORAGE_PATH: ${ARGO_DOC_STORAGE_PATH}
     ports:
       - "8080:8080"
     depends_on:
@@ -55,9 +56,12 @@ services:
         condition: service_started
     networks:
       - app-network
+    volumes:
+      - argo_documents:/var/argo/documents
 
 volumes:
   postgres_data:
+  argo_documents:
 
 networks:
   app-network:
