@@ -10,6 +10,11 @@ spring:
     active: dev
   application:
     name: argo
+  servlet:
+    multipart:
+      max-file-size: 55MB
+      max-request-size: 55MB
+      enabled: true
 
   mvc:
 #    Spring MVC's built-in exceptions (like MethodArgumentNotValidException, HttpRequestMethodNotSupportedException,
@@ -83,3 +88,5 @@ argo:
     match:
       price-tolerance-percent: 2.0
       quantity-tolerance-percent: 5.0
+  documentation:
+    storage-path-root: ${ARGO_DOC_STORAGE_PATH:/var/argo/documents}

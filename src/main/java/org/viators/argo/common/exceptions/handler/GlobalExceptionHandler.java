@@ -11,6 +11,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 import org.viators.argo.common.exceptions.*;
 
@@ -22,7 +23,7 @@ import java.util.List;
 @Slf4j
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
-    private static final String ERROR_TYPE_BASE = "https://api.argo.com/errors";
+    private static final String ERROR_TYPE_BASE = "https://api.argo.com/errors/";
 
     // ═══════════════════════════════════════════════════════════════
     //  Custom Application Exceptions
@@ -56,6 +57,47 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ProblemDetail handleAccessDenied(AccessDeniedException ex) {
         log.warn("Access denied: {}", ex.getMessage());
         return buildProblemDetail(HttpStatus.FORBIDDEN, "Access Denied", "access-denied", ex);
+    }
+
+    @ExceptionHandler(InvalidPdfException.class)
+    public ProblemDetail handleInvalidPdf(InvalidPdfException ex) {
+        log.warn("Invalid PDF upload: {}", ex.getMessage());
+        return buildProblemDetail(HttpStatus.BAD_REQUEST, "Invalid PDF", "invalid-pdf", ex);
+    }
+
+    @ExceptionHandler(FileSizeExceededException.class)
+    public ProblemDetail handleFileSizeExceeded(FileSizeExceededException ex) {
+        log.warn("File size exceeded: {}", ex.getMessage());
+        return buildProblemDetail(HttpStatus.CONTENT_TOO_LARGE, "File Too Large", "file-too-large", ex);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ProblemDetail handleMaxUploadSize(MaxUploadSizeExceededException ex) {
+        log.warn("Multipart size limit exceeded");
+
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+            HttpStatus.CONTENT_TOO_LARGE,
+            "Uploaded file exceeds the maximum allowed size."
+        );
+
+        problem.setTitle("File Too Large");
+        problem.setType(URI.create(ERROR_TYPE_BASE + "file-too-large"));
+        problem.setProperty("errorCode", ErrorCodeEnum.CONTENT_TOO_LARGE);
+
+        return problem;
+    }
+
+    @ExceptionHandler(StorageException.class)
+    public ProblemDetail handleStorage(StorageException ex) {
+        log.error("Storage failure: {}", ex.getMessage(), ex);
+
+        ProblemDetail problem = buildProblemDetail(
+            HttpStatus.INTERNAL_SERVER_ERROR, "Storage Error", "storage-error", ex
+        );
+
+        // Override the detail message for not expose internal storage details.
+        problem.setDetail("Could not save the uploaded file. Please try again later.");
+        return problem;
     }
 
     /**
