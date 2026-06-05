@@ -3,6 +3,7 @@ package org.viators.argo.common.validation;
 import org.apache.tika.Tika;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
+import org.viators.argo.common.exceptions.InvalidPdfException;
 import org.viators.argo.common.exceptions.InvalidStateException;
 import org.viators.argo.common.exceptions.StorageException;
 
@@ -17,19 +18,18 @@ public class PdfValidator {
 
     public void validate(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new StorageException("File is empty");
+            throw new InvalidPdfException("File is empty");
         }
 
         try (InputStream in = file.getInputStream()) {
             String detected = tika.detect(in);
             if (!PDF_MIME_TYPE.equals(detected)) {
-                throw new StorageException(
+                throw new InvalidPdfException(
                     "File is not a PDF. Detected type: " + detected
                 );
             }
         } catch (IOException e) {
-            throw new StorageException("Could not read uploaded file: " + e.getMessage());
+            throw new InvalidPdfException("Could not read uploaded file: " + e.getMessage());
         }
-
     }
 }
