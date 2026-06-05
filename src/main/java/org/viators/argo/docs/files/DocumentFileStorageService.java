@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.viators.argo.common.exceptions.InvalidStateException;
+import org.viators.argo.common.exceptions.StorageException;
 import org.viators.argo.docs.config.DocStorageProperties;
 
 import java.io.IOException;
@@ -41,7 +42,7 @@ public class DocumentFileStorageService {
         try (InputStream in = file.getInputStream()) {
             Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
-            throw new InvalidStateException("Failed to store file with key: " + storageKey);
+            throw new StorageException("Failed to store file with key: " + storageKey);
         }
     }
 
@@ -56,7 +57,7 @@ public class DocumentFileStorageService {
     private Path resolve(String storageKey) {
         Path resolved = storageRoot.resolve(storageKey).normalize();
         if (!resolved.startsWith(storageRoot)) {
-            throw new InvalidStateException("Storage key escapes root:" + storageKey);
+            throw new StorageException("Storage key escapes root:" + storageKey);
         }
         return resolved;
     }

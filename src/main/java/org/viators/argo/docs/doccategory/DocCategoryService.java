@@ -11,6 +11,8 @@ import org.viators.argo.common.exceptions.ResourceNotFoundException;
 import org.viators.argo.docs.doccategory.dto.request.CreateDocCategoryRequest;
 import org.viators.argo.docs.doccategory.dto.request.UpdateDocCategoryRequest;
 import org.viators.argo.docs.doccategory.dto.response.DocCategoryDetailsResponse;
+import org.viators.argo.docs.doccategory.dto.response.DocCategoryWithDocumentsResponse;
+import org.viators.argo.docs.files.dto.response.DocumentFileSummaryResponse;
 
 import java.util.List;
 import java.util.Objects;
@@ -79,10 +81,22 @@ public class DocCategoryService {
         return DocCategoryDetailsResponse.from(docCategory);
     }
 
+    @Transactional(readOnly = true)
     public DocCategoryT getDocCategoryResourceByPublicId(String docCategoryPublicId) {
         return docCategoryRepository.findByPublicId(docCategoryPublicId)
             .orElseThrow(() -> new ResourceNotFoundException("DocCategory", "publicId", docCategoryPublicId));
+    }
 
+    @Transactional(readOnly = true)
+    public DocCategoryWithDocumentsResponse getDocCategoryWithDocFiles(String docCategoryPublicId) {
+        DocCategoryT result = docCategoryRepository.findByPublicIdWithDocFiles(docCategoryPublicId)
+            .orElseThrow(() -> new ResourceNotFoundException("DocCategory", "publicId", docCategoryPublicId));
+
+        List<DocumentFileSummaryResponse> documentFileSummaryResponse = result.getDocumentFiles().stream()
+            .map(DocumentFileSummaryResponse::from)
+            .toList();
+
+        return DocCategoryWithDocumentsResponse.from(result, documentFileSummaryResponse);
     }
 
     // Private helper methods

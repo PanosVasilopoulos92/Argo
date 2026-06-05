@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import org.viators.argo.docs.doccategory.dto.request.CreateDocCategoryRequest;
 import org.viators.argo.docs.doccategory.dto.request.UpdateDocCategoryRequest;
 import org.viators.argo.docs.doccategory.dto.response.DocCategoryDetailsResponse;
+import org.viators.argo.docs.doccategory.dto.response.DocCategoryWithDocumentsResponse;
 
 import java.net.URI;
 import java.util.List;
@@ -55,9 +56,20 @@ public class DocCategoryController {
     }
 
     @GetMapping("/{docCategoryPublicId}")
-    public ResponseEntity<DocCategoryDetailsResponse> getCategory(@PathVariable String docCategoryPublicId) {
+    public ResponseEntity<DocCategoryDetailsResponse> getCategory(
+        @PathVariable String docCategoryPublicId
+    ) {
         return ResponseEntity.ok(
             docCategoryService.getDocCategoryByPublicId(docCategoryPublicId)
+        );
+    }
+
+    @GetMapping("/{docCategoryPublicId}/files-summary")
+    public ResponseEntity<DocCategoryWithDocumentsResponse> getCategoryWithDocFilesSummary(
+        @PathVariable String docCategoryPublicId
+    ) {
+        return ResponseEntity.ok(
+            docCategoryService.getDocCategoryWithDocFiles(docCategoryPublicId)
         );
     }
 }
