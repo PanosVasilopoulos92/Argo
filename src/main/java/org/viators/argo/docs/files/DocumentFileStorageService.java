@@ -3,6 +3,8 @@ package org.viators.argo.docs.files;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.viators.argo.common.exceptions.InvalidStateException;
@@ -44,6 +46,23 @@ public class DocumentFileStorageService {
         } catch (IOException e) {
             throw new StorageException("Failed to store file with key: " + storageKey);
         }
+    }
+
+    public Resource load(String storageKey) {
+        Path target = resolve(storageKey);
+        if (!Files.exists(target)) {
+            throw new StorageException(
+                "File not found on disk for storage key: " + storageKey
+            );
+        }
+
+        if (!Files.isReadable(target)) {
+            throw new StorageException(
+                "File exists but is not readable for storage key: " + storageKey
+            );
+        }
+
+        return new FileSystemResource(target);
     }
 
     public void delete(String storageKey) {

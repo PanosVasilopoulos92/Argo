@@ -2,6 +2,7 @@ package org.viators.argo.docs.files;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -11,6 +12,7 @@ import org.viators.argo.common.exceptions.ResourceNotFoundException;
 import org.viators.argo.common.validation.PdfValidator;
 import org.viators.argo.docs.doccategory.DocCategoryService;
 import org.viators.argo.docs.doccategory.DocCategoryT;
+import org.viators.argo.docs.files.dto.DocumentFileDownload;
 import org.viators.argo.docs.files.dto.request.UploadDocumentFileRequest;
 import org.viators.argo.docs.files.dto.response.DocumentFileDetailsResponse;
 
@@ -67,7 +69,20 @@ public class DocumentFileService {
             documentFile.getPublicId(), storageKey, docCategory.getName());
 
         return DocumentFileDetailsResponse.from(documentFile);
+    }
 
+    public DocumentFileDownload download(String storageKey) {
+        DocumentFileT documentFile = documentFileRepository.findByStorageKey(storageKey)
+            .orElseThrow(() -> new ResourceNotFoundException("DocumentFile", "storage key", storageKey));
+
+        Resource resource = documentFileStorageService.load(storageKey);
+
+        return new DocumentFileDownload(
+            resource,
+            documentFile.getContentType(),
+            documentFile.getOriginalFilename(),
+            documentFile.getFileSize()
+        );
     }
 
     private void registerFileRollbackHook(String storageKey) {
