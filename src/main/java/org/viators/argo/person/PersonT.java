@@ -45,6 +45,7 @@ public abstract class PersonT extends BaseEntity {
     @Column(name = "birth_place", length = 20)
     private String birthPlace;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "gender", nullable = false)
     private GenderEnum gender;
 
